@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-// Import your pages
+import 'dart:math'; // For min/max in progress bar
+
+// Import your pages (assuming these are defined elsewhere)
 import 'income_page.dart';
 import 'expenses_page.dart';
 import 'budget_page.dart';
@@ -17,7 +19,10 @@ const Color cardGradientStart = Color(0xFF3B8D99); // Soft Teal for balance card
 const Color cardGradientEnd = Color(0xFF4F67B5); // Soft Indigo for balance card gradient
 const Color actionIconBackground = Color(0xFFE8F5FF); // Very Light Blue for quick actions background
 const Color cardShadowColor = Color(0x3311355F); // Shadow for primary elements
+const Color spendingRed = Color(0xFFC62828);
+const Color spendingGreen = Color(0xFF4CAF50);
 
+// ================= PLACEHOLDER PAGES (For navigation) =================
 class FinancePage extends StatelessWidget {
   const FinancePage({super.key});
   @override
@@ -115,13 +120,13 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
       'title': 'Need a Side Hustle?',
       'subtitle': 'Explore simple ways to earn extra cash between classes.',
       'color': const Color(0xFF6A1B9A), // Deep Purple
-      'imageUrl': 'https://images.unsplash.com/photo-1542838132-92c90c611488?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'imageUrl': 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTl8fHNpZGUlMjBodXN0bGV8ZW58MHx8fHwxNjk5NDQ1Mjg0fDA&ixlib=rb-4.0.3&q=80&w=1080',
     },
     {
       'title': 'Pay Yourself First',
       'subtitle': 'Save a small amount immediately after receiving your allowance.',
       'color': const Color(0xFFC62828), // Red
-      'imageUrl': 'https://images.unsplash.com/photo-1563986968856-43b85994f83b?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'imageUrl': 'https://images.unsplash.com/photo-1593341646782-adf922880b26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTV8fHNhdmV8ZW58MHx8fHwxNjk5NDQ1NjUzfDA&ixlib=rb-4.0.3&q=80&w=1080',
     },
   ];
 
@@ -280,7 +285,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
   }
 }
 
-// ================= HOME PAGE (MODIFIED) =================
+// ================= HOME PAGE (UPDATED - CLEANER ACTIONS) =================
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -289,9 +294,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // New state variable to control balance visibility
+  // State variable to control balance visibility
   bool _isBalanceVisible = true;
+  // Placeholder budget for the spending card logic
+  final double _monthlyBudgetGoal = 1200.00; 
 
+  // --- Firestore Stream for Income ---
   Stream<double> _getTotalIncomeStream() {
     final userId = 'local_user';
     return FirebaseFirestore.instance
@@ -302,21 +310,51 @@ class _HomePageState extends State<HomePage> {
         .map((snapshot) {
       double total = 0.0;
       for (var doc in snapshot.docs) {
-        // Ensure 'amount' is treated as a double
         final amount = doc['amount'];
         if (amount is int) {
           total += amount.toDouble();
         } else if (amount is double) {
           total += amount;
         }
-        // Handle potential null or non-numeric data gracefully
       }
       return total;
     });
   }
 
+  // --- New Firestore Stream for Expenses ---
+  Stream<double> _getTotalExpensesStream() {
+    // Determine the start and end of the current month
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+    final userId = 'local_user';
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('expenses')
+        // Filter by date for the current month (assuming a 'timestamp' field)
+        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+        .where('timestamp', isLessThanOrEqualTo: endOfMonth)
+        .snapshots()
+        .map((snapshot) {
+      double total = 0.0;
+      for (var doc in snapshot.docs) {
+        final amount = doc['amount'];
+        if (amount is int) {
+          total += amount.toDouble();
+        } else if (amount is double) {
+          total += amount;
+        }
+      }
+      return total;
+    });
+  }
+
+
   // --- WIDGET 1: Gradient Income Card (Balance Card) ---
   Widget _incomeCard(BuildContext context) {
+    // Note: This card still uses Total Income.
     return StreamBuilder<double>(
       stream: _getTotalIncomeStream(),
       builder: (context, snapshot) {
@@ -333,14 +371,13 @@ class _HomePageState extends State<HomePage> {
             bottom: 28,
           ),
           decoration: const BoxDecoration(
-            // Use a softer gradient for the balance card
             gradient: LinearGradient(
               colors: [cardGradientStart, cardGradientEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(35), // Slightly larger curve
+              bottomLeft: Radius.circular(35), 
               bottomRight: Radius.circular(35),
             ),
             boxShadow: [
@@ -373,7 +410,7 @@ class _HomePageState extends State<HomePage> {
                     displayBalance,
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 32, // Larger font size for impact
+                        fontSize: 32, 
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2),
                   ),
@@ -407,14 +444,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- WIDGET 2: Quick Actions (Redesigned) ---
+  // --- WIDGET 2: Quick Actions (Reverted Icons and Simplified Colors) ---
   Widget _quickActions(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      padding: const EdgeInsets.all(16), // Increased padding
+      padding: const EdgeInsets.all(16), 
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22), // More rounded corners
+        borderRadius: BorderRadius.circular(22), 
         boxShadow: [
           BoxShadow(
               color: Colors.black.withAlpha(15),
@@ -422,12 +459,30 @@ class _HomePageState extends State<HomePage> {
               offset: const Offset(0, 5))
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _actionItem(context, LucideIcons.wallet, 'Income', const IncomePage(), primaryBlue),
-          _actionItem(context, LucideIcons.trendingDown, 'Expenses', const ExpensesPage(), const Color(0xFFC62828)), // Red for expenses
-          _actionItem(context, LucideIcons.barChart2, 'Finance', const FinancePage(), const Color(0xFF0D47A1)), // Deeper Blue for finance
+          // Text is now outside the icon row for better separation
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0, left: 8.0, top: 4.0),
+            child: Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black, // Changed to black for simplicity
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Reverted to original icons and using primaryBlue for color
+              _actionItem(context, LucideIcons.wallet, 'Income', const IncomePage(), primaryBlue), 
+              _actionItem(context, LucideIcons.trendingDown, 'Expenses', const ExpensesPage(), primaryBlue), 
+              _actionItem(context, LucideIcons.barChart2, 'Finance', const FinancePage(), primaryBlue), 
+            ],
+          ),
         ],
       ),
     );
@@ -439,9 +494,8 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(14), // Increased padding
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              // Simple, soft background
               color: actionIconBackground,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
@@ -449,66 +503,107 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 4))
               ],
             ),
-            child: Icon(icon, size: 28, color: iconColor), // Dynamic color
+            // Icon color is now primaryBlue (passed as iconColor)
+            child: Icon(icon, size: 28, color: iconColor), 
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, color: primaryBlue, fontWeight: FontWeight.w600)), // Darker text
+          // Text color is now primaryBlue
+          Text(label, style: const TextStyle(fontSize: 12, color: primaryBlue, fontWeight: FontWeight.w600)), 
         ],
       ),
     );
   }
 
-  // --- WIDGET 3: Info Cards (Redesigned) ---
-  Widget _infoCards() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20), // Increased padding
-      decoration: BoxDecoration(
-        color: primaryBlue, // Retain dark blue background
-        borderRadius: BorderRadius.circular(22), // Matching corner radius
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Quick Tips', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-          const Divider(color: Colors.white30, height: 25),
-          _infoRow(LucideIcons.creditCard, 'TRACK YOUR SPENDING',
-              'Add your expenses to see how you spend your money'),
-          const SizedBox(height: 15), // Increased spacing
-          _infoRow(LucideIcons.bookOpen, 'BUILD A BUDGET',
-              'Know how much you can spend by making a budget for it'),
-          const SizedBox(height: 15),
-          _infoRow(LucideIcons.users, 'KEEP TRACK TOGETHER',
-              'Share budget and transactions to see who paid for what'),
-        ],
-      ),
-    );
-  }
+  // --- WIDGET 3 (NEW): Current Month's Spending Summary Card ---
+  Widget _CurrentSpendingCard(BuildContext context) {
+    return StreamBuilder<double>(
+      stream: _getTotalExpensesStream(),
+      builder: (context, snapshot) {
+        final currentSpending = snapshot.data ?? 0.0;
+        final budgetGoal = _monthlyBudgetGoal;
+        
+        // Calculate the progress percentage (clamped between 0.0 and 1.0)
+        final progress = min(currentSpending / budgetGoal, 1.0);
+        
+        // Determine color based on progress (red if over 80%)
+        final progressColor = progress > 0.8 ? spendingRed : cardGradientEnd;
 
-  Widget _infoRow(IconData icon, String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start, // Align to top
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8), // Smaller padding for icon container
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+        return GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesPage())),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This Month\'s Spending',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryBlue),
+                ),
+                const SizedBox(height: 10),
+                
+                // Spending Amount
+                Text(
+                  'RM ${currentSpending.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: spendingRed,
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                // Progress Bar
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  minHeight: 10,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                const SizedBox(height: 8),
+
+                // Details and Goal
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}% of budget used',
+                      style: TextStyle(fontSize: 12, color: progressColor, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'Goal: RM ${budgetGoal.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 10),
+                // Call to action button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'View all Transactions ',
+                      style: TextStyle(fontSize: 13, color: cardGradientEnd, fontWeight: FontWeight.bold),
+                    ),
+                    Icon(LucideIcons.arrowRight, size: 16, color: cardGradientEnd),
+                  ],
+                )
+              ],
+            ),
           ),
-          child: Icon(icon, color: cardGradientEnd, size: 20), // Use accent color
-        ),
-        const SizedBox(width: 15), // Increased spacing
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)), // Bolder title
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
-        )
-      ],
+        );
+      },
     );
   }
 
@@ -517,22 +612,42 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         _incomeCard(context),
-        _quickActions(context),
-        const SizedBox(height: 18),
-        const AutoSlidingInfoCarousel(),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            children: [
-              _infoCards(),
-              const SizedBox(height: 40),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _quickActions(context),
+                const SizedBox(height: 18),
+                
+                _CurrentSpendingCard(context), 
+
+                const SizedBox(height: 24),
+                
+                // Additional Tips Section
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Text(
+                    'Additional Tips',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black, 
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const AutoSlidingInfoCarousel(),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 }
+
 
 // ================= CUSTOM BOTTOM NAV (Slightly Refined) =================
 class CustomBottomNav extends StatelessWidget {

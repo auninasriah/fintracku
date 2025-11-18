@@ -32,6 +32,10 @@ class _ExpensesPageState extends State<ExpensesPage> {
       .doc('local_user') // 🔁 replace with auth UID later
       .collection('expenses');
 
+  final DocumentReference userDoc = FirebaseFirestore.instance
+      .collection('users')
+      .doc('local_user'); // 🔁 replace with auth UID later
+
   DateTime displayedMonth = DateTime.now();
 
   // Helper: Month name

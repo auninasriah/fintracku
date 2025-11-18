@@ -4,43 +4,42 @@ import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
-// --- APPLIED USER'S THEME COLORS ---
-const Color primaryBlue = Color(0xFF11355F); // Dark Navy Blue
-const Color accentBlue = Color(0xFF234A78); // Medium Blue
-const Color lightAccent = Color(0xFF4A72AE); // Lighter accent blue
-const Color cardGradientStart = Color(0xFF3B8D99); // Soft Teal (Action Gradient Start)
-const Color cardGradientEnd = Color(0xFF4F67B5); // Soft Indigo (Action Gradient End)
-const Color actionIconBackground = Color(0xFFE8F5FF); // Very Light Blue for accents/secondary text
-const Color cardShadowColor = Color(0x3311355F); // Shadow for primary elements
+
+// --- IMPORT THE NEWLY CREATED PAGE WIDGETS ---
+import 'onboarding_screens/on_page_intro.dart';
+import 'onboarding_screens/on_page_details.dart';
+import 'onboarding_screens/on_page_income_goal.dart';
+import 'onboarding_screens/on_page_settings.dart';
+
+// --- VIBRANT BLUE-GREEN THEME COLORS (KEPT IN MAIN FILE) ---
+const Color vibrantBlueGreenStart = Color(0xFF005CFF); // Deep vibrant blue
+const Color vibrantBlueGreenMid = Color(0xFF00BFFF);   // Sky blue
+const Color vibrantBlueGreenEnd = Color(0xFF00FFC0);   // Bright aqua green
 
 // --- MAPPING COLORS TO APP STRUCTURE ---
+const Color darkStart = vibrantBlueGreenStart; 
+const Color darkEnd = vibrantBlueGreenEnd;     
 
-// Background Gradient (Dark Theme Consistency)
-const Color darkStart = Color(0xFF0D2C4D); // Slightly darker than primaryBlue
-const Color darkEnd = primaryBlue;
-
-// Action Button & Goal Selection Gradient
-const Color actionGradientStart = cardGradientStart; // Soft Teal
-const Color actionGradientEnd = cardGradientEnd;   // Soft Indigo
-
-// Text and Accent Colors
-const Color accentPrimary = Colors.white; // Main text and active elements
-const Color accentSecondary = actionIconBackground; // Lighter text/inactive elements
+const Color accentPrimary = Colors.white; 
+const Color accentSecondary = Colors.white; 
 const Color errorRed = Color(0xFFB00020);
 
-// Colors for "popup" style elements (cards, text fields)
-const Color cardBackground = accentBlue; // Medium Blue for card pop-out
-const Color cardBorder = lightAccent; // Lighter accent blue for borders
-const Color cardTextPrimary = accentPrimary; // White text on dark card
-const Color cardTextSecondary = accentSecondary; // Very Light Blue text on dark card
-const Color cardIconColor = lightAccent; // Lighter accent blue icon color
+const Color cardBackground = Color(0xFF1E70D0); // A mid-tone vibrant blue for card pop-out
+const Color cardBorder = vibrantBlueGreenMid; 
+const Color cardTextPrimary = accentPrimary; 
+const Color cardTextSecondary = accentSecondary; 
+const Color cardIconColor = vibrantBlueGreenMid; 
 
-// Neon Text Gradient (Subtle shining using theme colors, no harsh pink glow)
+// --- UPDATED ACTION BUTTON COLORS FOR HIGHER CONTRAST AND NEON GLOW ---
+const Color actionGradientStart = Color(0xFF00E0FF); // Brighter Aqua Blue
+const Color actionGradientEnd = Color(0xFF6A00FF); // Deep Violet/Purple (High Contrast)
+const Color actionButtonGlow = Color(0xAA6A00FF);    // Deeper Violet Glow (lebih jelas)
+
 const Color neonTextStart = Colors.white;
-const Color neonTextEnd = cardGradientStart; // Shimmer effect to Soft Teal
+const Color neonTextEnd = Color(0xFF00E0FF); 
 
+const Color cardShadowColor = Color(0x66005CFF);
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -50,6 +49,7 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
+  // --- STATE AND CONTROLLERS (KEPT IN MAIN FILE) ---
   final PageController _controller = PageController();
   int _currentPage = 0;
 
@@ -60,7 +60,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   String? _goal;
   bool _notifications = true;
-  String _theme = "dark";
+  String _theme = "dark"; 
 
   @override
   void initState() {
@@ -78,8 +78,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
     super.dispose();
   }
+  
+  // --- UTILITY SETTERS (USED BY CHILD WIDGETS) ---
+  void _setGoal(String? newGoal) {
+    setState(() => _goal = newGoal);
+  }
 
-  // --- Firebase Logic (UNCHANGED) ---
+  void _setNotifications(bool val) {
+    setState(() => _notifications = val);
+  }
+
+  void _setTheme(String val) {
+    setState(() => _theme = val);
+  }
+
+  // --- FIREBASE AND NAVIGATION LOGIC (KEPT IN MAIN FILE) ---
   Future<void> _saveUserData() async {
     if (_incomeController.text.isEmpty || _goal == null) {
       if (mounted) {
@@ -89,7 +102,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     try {
-      // NOTE: Using 'local_user' document ID for demonstration persistence.
+      // NOTE: Firebase logic remains here
       await FirebaseFirestore.instance.collection('users').doc('local_user').set({
         'name': _nameController.text.trim(),
         'age': int.tryParse(_ageController.text) ?? 0,
@@ -112,7 +125,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
-  // --- Navigation Logic (UNCHANGED) ---
   void _nextPage() {
     if (_currentPage == 1 && (_nameController.text.isEmpty || _ageController.text.isEmpty || _occupationController.text.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -133,7 +145,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     Navigator.pushReplacementNamed(context, '/home');
   }
 
-  // --- Reusable Widget: Stylized Illustration Area (for Page 1, 3, 4) ---
+  // --- REUSABLE UTILITY WIDGETS (KEPT IN MAIN FILE to manage state/data access) ---
+  
   Widget _buildIllustrationArea(IconData icon, String title) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -141,11 +154,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         Container(
           padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-            color: cardBackground, // Medium Blue background circle
+            color: cardBackground, 
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: cardShadowColor, // Theme shadow color
+                color: cardShadowColor, 
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -154,7 +167,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           child: Icon(
             icon,
             size: 80,
-            color: cardIconColor, // Lighter accent blue icon color
+            color: cardIconColor, 
           ),
         ),
         const SizedBox(height: 15),
@@ -163,15 +176,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
-            color: accentPrimary, // White for title
+            color: accentPrimary, 
           ),
         ),
       ],
     );
   }
 
-  // --- Helper Widget for Styled TextField (Dark Card theme) ---
-  Widget _buildDarkCardTextField({
+  Widget _buildVibrantCardTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
@@ -179,11 +191,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: cardBackground, // Medium Blue for the input
+        color: cardBackground, 
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: cardShadowColor, // Theme shadow color
+            color: cardShadowColor,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -192,18 +204,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: const TextStyle(color: cardTextPrimary, fontWeight: FontWeight.w600), // White text
+        style: const TextStyle(color: cardTextPrimary, fontWeight: FontWeight.w600), 
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: cardTextSecondary.withOpacity(0.7), fontWeight: FontWeight.w500),
-          prefixIcon: Icon(icon, color: cardIconColor), // Lighter accent blue icon
-
+          labelStyle: TextStyle(color: cardTextSecondary.withOpacity(0.9), fontWeight: FontWeight.w500),
+          prefixIcon: Icon(icon, color: cardIconColor), 
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: cardBorder, width: 2), // Lighter accent blue border
+            borderSide: BorderSide(color: cardBorder, width: 2), 
             borderRadius: BorderRadius.circular(15),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: cardGradientStart, width: 3), // Soft Teal focus accent
+            borderSide: BorderSide(color: actionGradientStart, width: 3), 
             borderRadius: BorderRadius.circular(15),
           ),
           fillColor: Colors.transparent, 
@@ -214,15 +225,48 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
+  Widget _buildGoalCardForVibrantTheme(String title) {
+    final selected = _goal == title;
+    return GestureDetector(
+      onTap: () => setState(() => _goal = title),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? actionGradientStart : cardBackground, 
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: selected ? actionGradientEnd : cardBorder, 
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: cardShadowColor.withOpacity(selected ? 0.6 : 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+              color: selected ? accentPrimary : accentSecondary, 
+              fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
+
+  // --- MAIN BUILD METHOD (UNCHANGED STRUCTURE) ---
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            // Dark Navy Blue Theme Background
             colors: [darkStart, darkEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -238,10 +282,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: _skip,
-                    child: Text(
-                      _currentPage < 3 ? "Skip" : "Review",
-                      style: const TextStyle(
-                        color: accentSecondary, // Very Light Blue text
+                    child: const Text(
+                      "Skip",
+                      style: TextStyle(
+                        color: accentSecondary, 
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -250,7 +294,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
 
-              // Page Content Area
+              // Page Content Area - NOW USING EXTERNAL WIDGETS
               Expanded(
                 child: PageView(
                   controller: _controller,
@@ -258,10 +302,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     setState(() => _currentPage = index);
                   },
                   children: [
-                    _buildIntroPage(),
-                    _buildNameOccupationPage(),
-                    _buildIncomeGoalPage(),
-                    _buildSettingsPage(),
+                    const OnPageIntro(), // Halaman 1
+                    
+                    OnPageDetails( // Halaman 2: Pass controllers and utility functions
+                      nameController: _nameController,
+                      ageController: _ageController,
+                      occupationController: _occupationController,
+                      buildVibrantCardTextField: _buildVibrantCardTextField,
+                    ),
+                    
+                    OnPageIncomeGoal( // Halaman 3: Pass controllers, state, and utility functions
+                      incomeController: _incomeController,
+                      goal: _goal,
+                      setGoal: _setGoal, // Pass the setter function
+                      buildIllustrationArea: _buildIllustrationArea,
+                      buildVibrantCardTextField: _buildVibrantCardTextField,
+                      buildGoalCardForVibrantTheme: _buildGoalCardForVibrantTheme,
+                    ),
+                    
+                    OnPageSettings( // Halaman 4: Pass state and setter functions
+                      notifications: _notifications,
+                      theme: _theme,
+                      setNotifications: _setNotifications,
+                      setTheme: _setTheme,
+                      buildIllustrationArea: _buildIllustrationArea,
+                    ),
                   ],
                 ),
               ),
@@ -271,7 +336,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 controller: _controller,
                 count: 4,
                 effect: ExpandingDotsEffect(
-                  activeDotColor: actionGradientStart, // Soft Teal active dot
+                  activeDotColor: actionGradientStart, 
                   dotColor: accentSecondary.withOpacity(0.5), 
                   dotHeight: 8,
                   dotWidth: 8,
@@ -279,7 +344,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ),
               const SizedBox(height: 20),
 
-              // Action Button (Teal to Indigo Gradient)
+              // Action Button (Cyan to Green Gradient)
               Padding(
                 padding: const EdgeInsets.only(bottom: 30, left: 30, right: 30),
                 child: GestureDetector(
@@ -289,7 +354,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        // ACTION BUTTON GRADIENT: Teal to Indigo
                         colors: [actionGradientStart, actionGradientEnd],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -297,7 +361,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: cardGradientEnd.withOpacity(0.4), // Glow matching Indigo end color
+                          color: actionGradientEnd.withOpacity(0.5), 
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         )
@@ -305,9 +369,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                     child: Center(
                       child: Text(
-                        _currentPage == 3 ? "Save & Start FinTrackU" : "Get Started", 
+                        _currentPage == 3 ? "Save" : "Next", 
                         style: const TextStyle(
-                            color: accentPrimary,
+                            color: accentPrimary, 
                             fontSize: 18,
                             fontWeight: FontWeight.w700),
                       ),
@@ -318,334 +382,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  // ================= 1. Welcome/Intro Page =================
-  Widget _buildIntroPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // INCREASED IMAGE SIZE (350x350)
-          Align(
-            alignment: Alignment.center,
-            child: Image.asset(
-              'assets/images/opening.png',
-              height: 350, 
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(height: 40),
-
-          // SHINING NEON TEXT (THEME COLORS) - No Glow
-          ShaderMask(
-            shaderCallback: (Rect bounds) {
-              return const LinearGradient(
-                colors: [neonTextStart, neonTextEnd], // White to Soft Teal
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds);
-            },
-            child: const Text( 
-              "Welcome to FinTrackU",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 34, 
-                fontWeight: FontWeight.w900,
-                color: Colors.white, // Essential for ShaderMask
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-
-          // BOLDER SUBTITLE (White for Contrast)
-          const Text(
-            "Manage your money smarter and achieve your financial goals effortlessly!",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18, 
-              fontWeight: FontWeight.bold, 
-              color: accentPrimary, 
-              height: 1.6, 
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 80),
-        ],
-      ),
-    );
-  }
-
-  // ================= 2. Name & Occupation Page =================
-  Widget _buildNameOccupationPage() {
-    return Column(
-      children: [
-        Expanded(
-          flex: 1,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Icon(LucideIcons.userCheck, size: 80, color: accentPrimary), 
-                const SizedBox(height: 10),
-                const Text(
-                  "Join FinTrackU",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: accentPrimary, 
-                  ),
-                ),
-                const SizedBox(height: 5),
-              ],
-            ),
-          ),
-        ),
-
-        Expanded(
-          flex: 3,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(30),
-            margin: const EdgeInsets.only(top: 20),
-            decoration: BoxDecoration(
-              color: cardBackground, // Medium Blue card background
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(40),
-                topRight: Radius.circular(40),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, -10),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Personal Info",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: cardTextPrimary, 
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    "This helps us personalize your budgeting experience.",
-                    style: TextStyle(fontSize: 14, color: cardTextSecondary), 
-                  ),
-                  const Divider(height: 30, color: lightAccent),
-                  
-                  _buildDarkCardTextField(
-                    controller: _nameController,
-                    label: "Your Full Name",
-                    icon: Icons.person_outline,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildDarkCardTextField(
-                    controller: _ageController,
-                    label: "Your Age",
-                    icon: Icons.cake_outlined,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildDarkCardTextField(
-                    controller: _occupationController,
-                    label: "Current Course/Occupation",
-                    icon: Icons.book_outlined,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ================= 3. Income & Goal Page =================
-  Widget _buildIncomeGoalPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildIllustrationArea(Icons.account_balance_wallet_outlined, "Income & Goals"),
-          const SizedBox(height: 30),
-
-          const Text(
-            "Financial Goals & Income",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: accentPrimary),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "This helps us calculate personalized budget recommendations.",
-            style: TextStyle(fontSize: 14, color: accentSecondary),
-          ),
-          const SizedBox(height: 30),
-
-          _buildDarkCardTextField( 
-            controller: _incomeController,
-            label: "Average Monthly Income (RM)",
-            icon: Icons.attach_money,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 30),
-          const Text("What is your main financial objective?",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: accentPrimary)), 
-          const SizedBox(height: 15),
-
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildGoalCardForDarkTheme("Save More"),
-              _buildGoalCardForDarkTheme("Pay Off Debts"),
-              _buildGoalCardForDarkTheme("Invest"),
-              _buildGoalCardForDarkTheme("Budgeting"),
-            ],
-          ),
-          const SizedBox(height: 60),
-        ],
-      ),
-    );
-  }
-
-  // --- Helper Widget for Goal Card (Dark theme) ---
-  Widget _buildGoalCardForDarkTheme(String title) {
-    final selected = _goal == title;
-    return GestureDetector(
-      onTap: () => setState(() => _goal = title),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? actionGradientStart : cardBackground, // Teal or Medium Blue
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: selected ? actionGradientEnd : cardBorder, // Indigo or Lighter accent blue border
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: cardShadowColor.withOpacity(selected ? 0.6 : 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-              color: selected ? accentPrimary : accentSecondary, // White or Very Light Blue
-              fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
-
-
-  // ================= 4. Settings Page =================
-  Widget _buildSettingsPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildIllustrationArea(Icons.tune_rounded, "Personal Preferences"),
-          const SizedBox(height: 30),
-
-          const Text(
-            "Customize Your App",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: accentPrimary),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "These settings can be changed anytime in the main menu.",
-            style: TextStyle(fontSize: 14, color: accentSecondary),
-          ),
-          const SizedBox(height: 30),
-
-          // Notifications Switch
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: cardBorder, width: 1.5),
-              borderRadius: BorderRadius.circular(15),
-              color: cardBackground, // Medium Blue fill
-              boxShadow: [
-                BoxShadow(
-                  color: cardShadowColor,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: SwitchListTile(
-              title: const Text("Enable spending reminders", style: TextStyle(color: cardTextPrimary, fontWeight: FontWeight.w700)),
-              subtitle: const Text("Receive timely alerts to stay within budget.", style: TextStyle(color: cardTextSecondary)),
-              value: _notifications,
-              onChanged: (val) => setState(() => _notifications = val),
-              activeColor: cardGradientStart, // Soft Teal accent
-              inactiveThumbColor: Colors.grey.shade600,
-              inactiveTrackColor: Colors.grey.shade800,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Theme Dropdown
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: cardShadowColor,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: "App Theme",
-                labelStyle: TextStyle(color: cardTextSecondary.withOpacity(0.7), fontWeight: FontWeight.w500),
-                prefixIcon: Icon(Icons.palette_outlined, color: cardIconColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: cardBorder, width: 1.5),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: cardGradientEnd, width: 3), // Soft Indigo focus
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                fillColor: cardBackground, // Medium Blue fill
-                filled: true,
-              ),
-              value: _theme,
-              style: const TextStyle(color: cardTextPrimary, fontWeight: FontWeight.w600), // White text
-              dropdownColor: darkStart, // Dark dropdown menu background
-              icon: const Icon(Icons.arrow_drop_down, color: accentPrimary),
-              onChanged: (val) => setState(() => _theme = val!),
-              items: [
-                DropdownMenuItem(value: "light", child: Text("Light", style: TextStyle(color: accentPrimary))),
-                DropdownMenuItem(value: "dark", child: Text("Dark", style: TextStyle(color: accentPrimary))),
-                DropdownMenuItem(value: "auto", child: Text("Auto (System)", style: TextStyle(color: accentPrimary))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 60),
-        ],
       ),
     );
   }
