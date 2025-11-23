@@ -38,8 +38,8 @@ dependencies:
   smooth_page_indicator: ^1.2.0
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
-  pdf: ^3.7.1
-  printing: ^5.10.1
+  pdf: ^3.7.4
+  printing: ^5.10.3
   path_provider: ^2.1.3
 
 
@@ -75,6 +75,8 @@ flutter:
     - assets/images/front.png 
     - assets/images/depan.png 
     - assets/images/opening.png 
+    - assets/images/abc.png 
+
 
 
   # To add assets to your application, add an assets section, like this:

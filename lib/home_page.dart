@@ -1,3 +1,4 @@
+// ...existing code...
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +9,7 @@ import 'dart:math'; // For min/max in progress bar
 import 'income_page.dart';
 import 'expenses_page.dart';
 import 'budget_page.dart';
+import 'smart_spend_page.dart'; 
 
 // --- COLOR DEFINITIONS ---
 const Color primaryBlue = Color(0xFF11355F); // Dark Navy Blue
@@ -34,16 +36,6 @@ class FinancePage extends StatelessWidget {
   }
 }
 
-class SmartSpendPage extends StatelessWidget {
-  const SmartSpendPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Smart Spend')),
-      body: const Center(child: Text('Smart Spend features go here')),
-    );
-  }
-}
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -55,6 +47,206 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
+
+// ================= CHAT ASSISTANT WIDGET (NEW) =================
+
+/// Represents a single message in the chat.
+class ChatMessage {
+  final String text;
+  final String sender; // 'user' or 'assistant'
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.text,
+    required this.sender,
+    required this.timestamp,
+  });
+}
+
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final List<ChatMessage> _messages = [
+    ChatMessage(
+      text: "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
+      sender: 'assistant',
+      timestamp: DateTime.now(),
+    ),
+  ];
+  bool _isSending = false;
+
+  void _sendMessage() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    // 1. Add user message
+    setState(() {
+      _messages.add(ChatMessage(text: text, sender: 'user', timestamp: DateTime.now()));
+      _controller.clear();
+      _isSending = true;
+    });
+
+    // Scroll to the bottom to show the new user message
+    _scrollToBottom();
+
+    // 2. Simulate AI API call (replace this with actual Gemini API call)
+    final assistantResponse = await _getAssistantResponse(text);
+
+    // 3. Add assistant response
+    setState(() {
+      _messages.add(ChatMessage(
+        text: assistantResponse,
+        sender: 'assistant',
+        timestamp: DateTime.now().add(const Duration(seconds: 1)),
+      ));
+      _isSending = false;
+    });
+
+    // Scroll to the bottom to show the new assistant message
+    _scrollToBottom();
+  }
+
+  Future<String> _getAssistantResponse(String prompt) async {
+    // --- START: GEMINI API PLACEHOLDER ---
+    // In a real Flutter app, you would make an HTTP request here.
+    await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+
+    if (prompt.toLowerCase().contains('budget') || prompt.toLowerCase().contains('spending')) {
+      return "Budgeting tip: Try the '50/30/20 Rule'—50% needs, 30% wants, 20% savings. Our Budget tab can help you track this!";
+    } else if (prompt.toLowerCase().contains('expense')) {
+      return "To track a new expense, simply tap the 'Expenses' button in the Quick Actions section on the Home Page.";
+    } else if (prompt.toLowerCase().contains('hello') || prompt.toLowerCase().contains('hi')) {
+      return "Hi there! How can I assist you with your finances today? Try asking for a budgeting tip!";
+    } else {
+      return "I'm focusing on student finance advice. Can you ask me about budgeting, saving, or tracking expenses?";
+    }
+    // --- END: GEMINI API PLACEHOLDER ---
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('AI Finance Assistant'),
+        backgroundColor: cardGradientStart,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Message List
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16.0),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                final isUser = message.sender == 'user';
+                return Align(
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.75,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isUser ? primaryBlue : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(16).copyWith(
+                        bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(16),
+                        bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(2),
+                      ),
+                    ),
+                    child: Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isUser ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Input Field
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(color: Colors.grey.shade300, blurRadius: 4, offset: const Offset(0, -2))
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    enabled: !_isSending,
+                    decoration: InputDecoration(
+                      hintText: _isSending ? 'Assistant is typing...' : 'Ask a finance question...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                    onSubmitted: _isSending ? null : (_) => _sendMessage(),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                GestureDetector(
+                  onTap: _isSending ? null : _sendMessage,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isSending ? Colors.grey : primaryBlue,
+                    ),
+                    child: _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : const Icon(LucideIcons.send, color: Colors.white, size: 24),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 // ================= MAIN SHELL (UNCHANGED) =================
 class MainShell extends StatefulWidget {
@@ -242,7 +434,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
           height: 6.0,
           width: _currentPage == index ? 16.0 : 6.0,
           decoration: BoxDecoration(
-            color: _currentPage == index ? primaryBlue : Colors.grey.withAlpha(100),
+            color: _currentPage == index ? primaryBlue : const Color(0x64BDBDBD), // grey with alpha ~100
             borderRadius: BorderRadius.circular(3),
           ),
         );
@@ -515,7 +707,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- WIDGET 3 (NEW): Current Month's Spending Summary Card ---
-  Widget _CurrentSpendingCard(BuildContext context) {
+  Widget _currentSpendingCard(BuildContext context) {
     return StreamBuilder<double>(
       stream: _getTotalExpensesStream(),
       builder: (context, snapshot) {
@@ -568,6 +760,7 @@ class _HomePageState extends State<HomePage> {
                   backgroundColor: Colors.grey.shade200,
                   valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   minHeight: 10,
+                  // borderRadius is supported in newer Flutter; if your SDK doesn't support it, remove this line.
                   borderRadius: BorderRadius.circular(5),
                 ),
                 const SizedBox(height: 8),
@@ -609,37 +802,63 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        _incomeCard(context),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _quickActions(context),
-                const SizedBox(height: 18),
-                
-                _CurrentSpendingCard(context), 
+        Column(
+          children: [
+            _incomeCard(context),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _quickActions(context),
+                    const SizedBox(height: 18),
+                    
+                    _currentSpendingCard(context), 
 
-                const SizedBox(height: 24),
-                
-                // Additional Tips Section
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Text(
-                    'Additional Tips',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black, 
+                    const SizedBox(height: 24),
+                    
+                    // Additional Tips Section
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Text(
+                        'Additional Tips',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black, 
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    const AutoSlidingInfoCarousel(),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                const AutoSlidingInfoCarousel(),
-                const SizedBox(height: 40),
-              ],
+              ),
+            ),
+          ],
+        ),
+
+        // --- 2. Floating Chat Button (Positioned at the bottom right) ---
+        Positioned(
+          right: 20,
+          bottom: 20,
+          child: FloatingActionButton(
+            onPressed: () {
+              // Navigate to the full-screen ChatScreen
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ChatScreen()),
+              );
+            },
+            heroTag: "chatFab",
+            backgroundColor: primaryBlue,
+            shape: const CircleBorder(),
+            child: const Icon(
+              LucideIcons.messageSquare, 
+              color: Colors.white,
+              size: 28,
             ),
           ),
         ),
@@ -649,7 +868,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 
-// ================= CUSTOM BOTTOM NAV (Slightly Refined) =================
+// ================= BEAUTIFUL CUSTOM BOTTOM NAV =================
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -663,21 +882,26 @@ class CustomBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xEBFFFFFF), // Colors.white.withOpacity(0.92)
+        borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(12), blurRadius: 12)
+          BoxShadow(
+            color: const Color(0x14000000), // Colors.black.withOpacity(0.08)
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          )
         ],
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _navItem(LucideIcons.home, 'Home', 0),
-          _navItem(LucideIcons.sparkles, 'Smart Spend', 1),
-          _navItem(LucideIcons.pieChart, 'Budget', 2),
-          _navItem(LucideIcons.settings, 'Settings', 3),
+          _navItem(LucideIcons.home, "Home", 0),
+          _navItem(LucideIcons.sparkles, "Smart", 1),
+          _navItem(LucideIcons.pieChart, "Savings", 2),
+          _navItem(LucideIcons.settings, "Settings", 3),
         ],
       ),
     );
@@ -685,29 +909,48 @@ class CustomBottomNav extends StatelessWidget {
 
   Widget _navItem(IconData icon, String label, int index) {
     final bool active = index == currentIndex;
+
     return GestureDetector(
       onTap: () => onTap(index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: active ? accentBlue : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: active
-                  ? [
-                      BoxShadow(color: accentBlue.withAlpha(51), blurRadius: 8, offset: const Offset(0, 4))
-                    ]
-                  : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: const Color(0x5911355F), // primaryBlue.withOpacity(0.35)
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: active ? 24 : 22,
+              color: active ? Colors.white : primaryBlue,
             ),
-            child: Icon(icon, size: 22, color: active ? Colors.white : primaryBlue),
-          ),
-          const SizedBox(height: 6),
-          // Bolder text on hover
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? primaryBlue : Colors.black54)),
-        ],
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? Colors.white : Colors.black54,
+              ),
+              child: Text(label),
+            )
+          ],
+        ),
       ),
     );
   }
 }
+// ...existing code...

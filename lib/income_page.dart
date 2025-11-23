@@ -1,16 +1,21 @@
+// --------------------------------------------------------------
+//                  UPDATED INCOME PAGE WITH PDF EXPORT
+// --------------------------------------------------------------
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'add_income_page.dart';
+// PDF Dependencies
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:intl/intl.dart';
-import 'add_income_page.dart'; 
 
 // Consistent Color Definitions
 const Color primaryBlue = Color(0xFF11355F);
-const Color incomeGreen = Color(0xFF4CAF50); // Green for Income/Total
-const Color deepPurple = Color(0xFF7E57C2); 
+const Color incomeGreen = Color(0xFF4CAF50);
+const Color deepPurple = Color(0xFF7E57C2);
 
 class IncomePage extends StatefulWidget {
   const IncomePage({super.key});
@@ -20,6 +25,7 @@ class IncomePage extends StatefulWidget {
 }
 
 class _IncomePageState extends State<IncomePage> {
+  // Firestore Collection Reference
   final CollectionReference incomes = FirebaseFirestore.instance
       .collection('users')
       .doc('local_user')
@@ -35,25 +41,7 @@ class _IncomePageState extends State<IncomePage> {
     return (month >= 1 && month <= 12) ? months[month - 1] : months[0];
   }
 
-  // --- Utility Methods for Chart/UI Consistency ---
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'allowance':
-        return const Color(0xFF42A5F5); // Lighter Blue
-      case 'part time job':
-        return const Color(0xFF66BB6A); // Lighter Green
-      case 'bonus':
-        return const Color(0xFFAB47BC); // Lighter Purple
-      case 'salary':
-        return const Color(0xFFFFA726); // Amber/Orange
-      case 'freelance':
-        return deepPurple; // Deep Purple
-      default:
-        return Colors.grey.shade400; // Neutral default
-    }
-  }
-
+  // Function to determine the icon for the category
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'allowance':
@@ -71,79 +59,125 @@ class _IncomePageState extends State<IncomePage> {
     }
   }
 
-  // --- PDF Generation Feature (FIXED: Using pw.Table to allow custom styling) ---
+  // ----------- COLOR PALETTE FOR DONUT CHART ---------------
+  Color _chartColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'allowance':
+        return const Color(0xFFFFA726); // Orange
+      case 'part time job':
+        return const Color(0xFF42A5F5); // Blue
+      case 'bonus':
+        return const Color(0xFF1E88E5); // Deep Blue
+      case 'salary':
+        return const Color(0xFFFFEB3B); // Yellow
+      case 'freelance':
+        return const Color(0xFF5E35B1); // Purple
+      default:
+        return const Color(0xFFBDBDBD); // Grey
+    }
+  }
 
-  Future<void> _generateMonthlyReport(
-      List<QueryDocumentSnapshot> docs, double totalIncome) async {
+  // --------------------------------------------------------------
+  //                        NEW CRUD FUNCTIONS
+  // --------------------------------------------------------------
+
+  // Function to handle deleting an income document from Firebase
+  Future<void> _deleteIncome(String docId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Delete"),
+        content: const Text("Are you sure you want to delete this income entry?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await incomes.doc(docId).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Income entry deleted successfully.")),
+        );
+      }
+    }
+  }
+
+  // Function to handle navigating to the AddIncomePage for editing
+  void _editIncome(String docId, Map<String, dynamic> currentData) {
+    // Navigate to AddIncomePage, passing data for editing if AddIncomePage supports it.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddIncomePage(),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------
+  //                        PDF GENERATION LOGIC
+  // --------------------------------------------------------------
+
+  Future<void> _generatePdf(
+    List<QueryDocumentSnapshot> docs,
+    double totalIncome,
+    Map<String, double> categoryTotals,
+  ) async {
     final pdf = pw.Document();
 
-    final sortedDocs = docs.toList()
-      ..sort((a, b) {
-        final dateA = (a['date'] as Timestamp).toDate();
-        final dateB = (b['date'] as Timestamp).toDate();
-        return dateB.compareTo(dateA);
-      });
-
-    final tableHeaders = ['Date', 'Category', 'Note', 'Amount (RM)'];
-
-    // 1. Prepare data rows
-    List<List<String>> tableData = [];
-    for (var doc in sortedDocs) {
+      // Prepare data for PDF table (robust parsing for amount/date)
+    final List<List<String>> tableData = docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      final date = (data['date'] as Timestamp).toDate();
-      final dateString = DateFormat('dd MMM yy').format(date);
-      final category = data['category'] ?? 'N/A';
-      final note = data['note'] ?? '';
-      final amount = (data['amount'] ?? 0.0).toStringAsFixed(2);
-      tableData.add([dateString, category, note, '+ RM $amount']);
-    }
+      final category = (data['category'] ?? 'Others').toString();
 
-    // 2. Add Total Income row (last row)
-    tableData.add(
-        ['', '', 'TOTAL INCOME:', 'RM ${totalIncome.toStringAsFixed(2)}']);
+      // parse amount safely
+      double amount;
+      final rawAmount = data['amount'];
+      if (rawAmount is num) {
+        amount = rawAmount.toDouble();
+      } else {
+        amount = double.tryParse(rawAmount?.toString() ?? '0') ?? 0.0;
+      }
 
-    // 3. Build rows list with header and data, applying styles explicitly
-    List<pw.TableRow> pdfRows = [];
+      // parse date safely
+      DateTime date;
+      final rawDate = data['date'];
+      if (rawDate is Timestamp) {
+        date = rawDate.toDate();
+      } else {
+        date = DateTime.tryParse(rawDate?.toString() ?? '') ?? DateTime.now();
+      }
 
-    // Header Row
-    pdfRows.add(pw.TableRow(
-      decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF11355F)),
-      children: tableHeaders.map((header) {
-        return pw.Container(
-          alignment: pw.Alignment.centerLeft,
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(header,
-              style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-        );
-      }).toList(),
-    ));
+      return [
+        DateFormat('dd MMM yyyy').format(date),
+        category,
+        "RM ${amount.toStringAsFixed(2)}",
+      ];
+    }).toList();
+    
+    // Prepare Summary Data
+    final List<List<String>> summaryData = categoryTotals.entries.map((e) {
+      return [
+        e.key,
+        "RM ${e.value.toStringAsFixed(2)}",
+        "${((e.value / totalIncome) * 100).toStringAsFixed(1)}%",
+      ];
+    }).toList();
 
-    // Data Rows with conditional styling
-    final totalRowIndex = tableData.length - 1;
-    for (int i = 0; i < tableData.length; i++) {
-      final isTotalRow = (i == totalRowIndex);
-      final row = tableData[i];
-
-      pdfRows.add(pw.TableRow(
-        children: row.map((cellText) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(8),
-            child: pw.Text(
-              cellText,
-              style: isTotalRow
-                  ? pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 10,
-                      color: PdfColor.fromInt(incomeGreen.value), // Green color
-                    )
-                  : const pw.TextStyle(fontSize: 10),
-            ),
-          );
-        }).toList(),
-      ));
-    }
-
+    // Add Total Row to Summary
+    summaryData.add([
+      "TOTAL",
+      "RM ${totalIncome.toStringAsFixed(2)}",
+      "100.0%",
+    ]);
 
     pdf.addPage(
       pw.Page(
@@ -152,49 +186,71 @@ class _IncomePageState extends State<IncomePage> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                'Income Report for $selectedMonth',
-                style: pw.TextStyle(
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColor.fromInt(primaryBlue.value)),
-              ),
-              pw.SizedBox(height: 10),
-              pw.Divider(color: PdfColor.fromInt(primaryBlue.value)),
+              pw.Text('Income Report for $selectedMonth',
+                  style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromInt(primaryBlue.value))),
               pw.SizedBox(height: 20),
 
-              // Transactions Table using manual pw.Table
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-                columnWidths: const {
-                  0: pw.FlexColumnWidth(2),
-                  1: pw.FlexColumnWidth(3),
-                  2: pw.FlexColumnWidth(4),
-                  3: pw.FlexColumnWidth(3),
-                },
-                children: pdfRows, // Use the pre-built, styled rows
+              // Summary Table
+              pw.Text('Summary by Category',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Table.fromTextArray(
+                headers: ['Category', 'Amount', 'Percentage'],
+                data: summaryData,
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: pw.BoxDecoration(color: PdfColor.fromInt(primaryBlue.value)),
+                cellAlignment: pw.Alignment.centerRight,
+                cellAlignments: {0: pw.Alignment.centerLeft},
+                border: pw.TableBorder.all(),
               ),
 
               pw.SizedBox(height: 30),
-              pw.Text(
-                  'Report Generated: ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
-                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+
+              // Transactions Table
+              pw.Text('Transaction Details',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Table.fromTextArray(
+                headers: ['Date', 'Category', 'Amount'],
+                data: tableData,
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                border: pw.TableBorder.all(),
+                cellAlignment: pw.Alignment.centerRight,
+                cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerLeft},
+              ),
+
+              pw.Spacer(),
+              pw.Align(
+                alignment: pw.Alignment.bottomRight,
+                child: pw.Text("Report generated on ${DateFormat('yyyy-MM-dd').format(DateTime.now())}"),
+              )
             ],
           );
         },
       ),
     );
 
+    // Display the PDF preview
     await Printing.sharePdf(
       bytes: await pdf.save(),
-      filename: 'Income_Report_${selectedMonth}_${DateTime.now().year}.pdf',
+      filename: 'income_report_${selectedMonth.toLowerCase()}.pdf',
     );
   }
 
-  // --- Custom Widgets ---
+  // --------------------------------------------------------------
+  //                          UI SECTIONS
+  // --------------------------------------------------------------
 
-  Widget _structuralInfoCard(String title, String mainValue,
-      {String? subTitle, required Color startColor, required Color endColor}) {
+  Widget _structuralInfoCard(
+    String title,
+    String mainValue, {
+    String? subTitle,
+    required Color startColor,
+    required Color endColor,
+  }) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -217,31 +273,11 @@ class _IncomePageState extends State<IncomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              mainValue,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            if (subTitle != null && subTitle.isNotEmpty)
-              Text(
-                subTitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                ),
-              ),
+            Text(title, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+            const SizedBox(height: 6),
+            Text(mainValue,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            if (subTitle != null) Text(subTitle, style: const TextStyle(color: Colors.white)),
           ],
         ),
       ),
@@ -255,23 +291,13 @@ class _IncomePageState extends State<IncomePage> {
         children: [
           const Icon(Icons.money_off, size: 80, color: primaryBlue),
           const SizedBox(height: 16),
-          Text(
-            "No Income recorded for $selectedMonth.",
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, color: Colors.black54),
-          ),
+          Text("No Income recorded for $selectedMonth.",
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.black54)),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add_circle, color: primaryBlue),
-            label: const Text(
-              "Add Income Now",
-              style: TextStyle(
-                  color: primaryBlue, fontWeight: FontWeight.bold),
-            ),
-            onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AddIncomePage()));
-            },
+            label: const Text("Add Income Now", style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomePage())),
           ),
         ],
       ),
@@ -281,39 +307,22 @@ class _IncomePageState extends State<IncomePage> {
   Widget _monthSelector() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
       child: Row(
-        children: List.generate(12, (index) {
-          final month = _getMonthName(index + 1);
+        children: List.generate(12, (i) {
+          final month = _getMonthName(i + 1);
           final isSelected = month == selectedMonth;
+
           return GestureDetector(
             onTap: () => setState(() => selectedMonth = month),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? primaryBlue
-                    : Colors.grey[200],
+                color: isSelected ? primaryBlue : Colors.grey[200],
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: primaryBlue.withOpacity(0.4),
-                          blurRadius: 5,
-                          offset: const Offset(0, 3),
-                        )
-                      ]
-                    : null,
               ),
-              child: Text(
-                month,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
+              child: Text(month,
+                  style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
             ),
           );
         }),
@@ -321,82 +330,82 @@ class _IncomePageState extends State<IncomePage> {
     );
   }
 
-  // --- Build Method ---
+  // --------------------------------------------------------------
+  //                     DONUT CHART WITH LABELS
+  // --------------------------------------------------------------
+
+  Widget buildDonutChart(
+    Map<String, double> categories,
+    double totalIncome,
+  ) {
+    final List<PieChartSectionData> sections = categories.entries.map((e) {
+      return PieChartSectionData(
+        value: e.value,
+        color: _chartColor(e.key),
+        radius: 55,
+        showTitle: false,
+      );
+    }).toList();
+
+    return SizedBox(
+      height: 260,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          PieChart(
+            PieChartData(
+              centerSpaceRadius: 70,
+              sectionsSpace: 3,
+              sections: sections,
+            ),
+          ),
+
+          // Center income text
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "RM ${totalIncome.toStringAsFixed(2)}",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryBlue),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Total Income",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------
+  //                          BUILD
+  // --------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          "Income Tracker",
-          style: TextStyle(
-              color: primaryBlue, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          StreamBuilder<QuerySnapshot>(
-            stream: incomes.snapshots(), 
-            builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const SizedBox.shrink(); 
-              }
-              
-              final allDocs = snapshot.data!.docs;
-              final docs = allDocs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                if (data['date'] == null) return false;
-                final date = (data['date'] as Timestamp).toDate();
-                return _getMonthName(date.month) == selectedMonth;
-              }).toList();
-              
-              double totalIncome = docs.fold(0.0, (sum, doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return sum + (data['amount'] ?? 0).toDouble();
-              });
-
-              if (docs.isEmpty) {
-                return const SizedBox.shrink(); 
-              }
-
-              return IconButton(
-                icon: const Icon(Icons.picture_as_pdf, color: primaryBlue),
-                onPressed: () => _generateMonthlyReport(docs, totalIncome),
-                tooltip: 'Export Monthly Report PDF',
-              );
-            },
-          ),
-        ],
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: incomes.orderBy('date', descending: true).snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return _noIncomeView();
-          }
-
           final allDocs = snapshot.data!.docs;
+
           final docs = allDocs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             if (data['date'] == null) return false;
+
             final date = (data['date'] as Timestamp).toDate();
             return _getMonthName(date.month) == selectedMonth;
           }).toList();
 
           double totalIncome = 0;
-          String highestCategory = 'N/A';
-          double highestAmount = 0;
           Map<String, double> categoryTotals = {};
 
           for (var doc in docs) {
@@ -405,257 +414,145 @@ class _IncomePageState extends State<IncomePage> {
             final category = data['category'] ?? 'Others';
 
             totalIncome += amount;
-            categoryTotals[category] =
-                (categoryTotals[category] ?? 0) + amount;
-          }
-          
-          if (categoryTotals.isNotEmpty) {
-             highestCategory = categoryTotals.entries.reduce((a, b) => a.value > b.value ? a : b).key;
-             highestAmount = categoryTotals[highestCategory] ?? 0;
+            categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
           }
 
-          final pieSections = categoryTotals.entries.map((entry) {
-            final percentage = totalIncome > 0 ? (entry.value / totalIncome * 100) : 0;
+          final highestCategory = totalIncome > 0
+              ? categoryTotals.entries.reduce((a, b) => a.value > b.value ? a : b).key
+              : 'N/A';
+          final highestAmount = totalIncome > 0 ? categoryTotals[highestCategory]! : 0.0;
 
-            return PieChartSectionData(
-              value: entry.value,
-              title: percentage > 5 ? '${percentage.toStringAsFixed(1)}%' : '',
-              color: _getCategoryColor(entry.key),
-              radius: 60,
-              titleStyle: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              badgeWidget: totalIncome > 0
-                  ? _PieChartCategoryBadge(
-                      color: _getCategoryColor(entry.key),
-                      text: entry.key,
-                    )
-                  : null,
-              badgePositionPercentageOffset: 1.1,
-            );
-          }).toList();
-
-          if (docs.isEmpty && allDocs.isNotEmpty) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _monthSelector(), 
-                  const SizedBox(height: 40),
-                  _noIncomeView(),
-                ],
-              ),
-            );
-          }
-          
-          if (docs.isEmpty) {
-              return _noIncomeView();
-          }
-
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Structural Summary Cards with Gradient
-                Row(
-                  children: [
-                    _structuralInfoCard(
-                      "Total Income",
-                      "RM ${totalIncome.toStringAsFixed(2)}",
-                      startColor: primaryBlue,
-                      endColor: const Color(0xFF345A8B),
-                    ),
-                    _structuralInfoCard(
-                      "Top Category",
-                      highestCategory,
-                      subTitle: highestCategory != 'N/A' ? "RM ${highestAmount.toStringAsFixed(2)}" : null,
-                      startColor: incomeGreen,
-                      endColor: const Color(0xFF66BB6A),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // 2. Month Selector
-                _monthSelector(),
-
-                // 3. Pie Chart Section
-                const SizedBox(height: 32), 
-                const Text("Income Distribution",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: primaryBlue)),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.grey.shade200),
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("Income Tracker",
+                  style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(icon: const Icon(Icons.arrow_back, color: primaryBlue), onPressed: () => Navigator.pop(context)),
+              // NEW: PDF Download Button
+              actions: [
+                if (totalIncome > 0)
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf, color: primaryBlue),
+                    onPressed: () => _generatePdf(docs, totalIncome, categoryTotals),
                   ),
-                  child: Center(
-                    child: SizedBox(
-                      height: 250, 
-                      child: totalIncome > 0
-                          ? PieChart(
-                              PieChartData(
-                                sections: pieSections,
-                                centerSpaceRadius: 50, 
-                                sectionsSpace: 2,
-                                pieTouchData: PieTouchData(enabled: true),
-                              ),
-                            )
-                          : Center(
-                              child: Text(
-                                "No income data for $selectedMonth.",
-                                style: TextStyle(color: Colors.grey.shade600),
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+              ],
+            ),
 
-                // 4. Income List Header
-                Text("Transactions for $selectedMonth",
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: primaryBlue)),
-                const SizedBox(height: 12),
+            floatingActionButton: FloatingActionButton(
+              backgroundColor: primaryBlue,
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomePage())),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
 
-                // 5. Income List
-                Column(
-                  children: docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final category = data['category'] ?? 'Others';
-                    final amount = (data['amount'] ?? 0).toDouble();
-                    final color = _getCategoryColor(category);
-                    final icon = _getCategoryIcon(category);
-                    final date = (data['date'] as Timestamp?)?.toDate();
-                    final docId = doc.id;
-
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      elevation: 2,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 16),
-                        leading: CircleAvatar(
-                          backgroundColor: color,
-                          child: Icon(icon, color: Colors.white),
-                        ),
-                        title: Text(
-                          category,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                        subtitle: Text(
-                          date != null
-                              ? DateFormat('dd MMM yyyy').format(date)
-                              : "No Date",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+            body: docs.isEmpty
+                ? _noIncomeView()
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Summary Cards
+                        Row(
                           children: [
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "+ RM ${amount.toStringAsFixed(2)}",
-                                  style: const TextStyle(
-                                    color: incomeGreen,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    // Edit button
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AddIncomePage(
-                                              incomeId: docId,
-                                              existingData: data,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Icon(Icons.edit,
-                                          color: Colors.blue, size: 20),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Delete button
-                                    GestureDetector(
-                                      onTap: () => incomes.doc(docId).delete(),
-                                      child: const Icon(Icons.delete,
-                                          color: Colors.red, size: 20),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            _structuralInfoCard(
+                              "Total Income",
+                              "RM ${totalIncome.toStringAsFixed(2)}",
+                              startColor: primaryBlue,
+                              endColor: const Color(0xFF345A8B),
+                            ),
+                            _structuralInfoCard(
+                              "Top Category",
+                              highestCategory,
+                              subTitle: "RM ${highestAmount.toStringAsFixed(2)}",
+                              startColor: incomeGreen,
+                              endColor: const Color(0xFF66BB6A),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
+
+                        const SizedBox(height: 30),
+
+                        _monthSelector(),
+
+                        const SizedBox(height: 30),
+
+                        const Text("Income Distribution",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryBlue)),
+                        const SizedBox(height: 12),
+
+                        buildDonutChart(categoryTotals, totalIncome),
+
+                        const SizedBox(height: 30),
+
+                        Text("Transactions for $selectedMonth",
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryBlue)),
+                        const SizedBox(height: 12),
+
+                        Column(
+                          children: docs.map((doc) {
+                            final docId = doc.id;
+                            final data = doc.data() as Map<String, dynamic>;
+                            final category = data['category'] ?? 'Others';
+                            final amount = (data['amount'] ?? 0).toDouble();
+                            final icon = _getCategoryIcon(category);
+                            final date = (data['date'] as Timestamp).toDate();
+
+                            return Card(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              margin: const EdgeInsets.only(bottom: 10),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: _chartColor(category),
+                                  child: Icon(icon, color: Colors.white),
+                                ),
+                                title: Text(category, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: Colors.grey)),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Amount Text
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: Text(
+                                        "+ RM ${amount.toStringAsFixed(2)}",
+                                        style: const TextStyle(color: incomeGreen, fontWeight: FontWeight.bold, fontSize: 14),
+                                      ),
+                                    ),
+
+                                    // Edit Button
+                                    SizedBox(
+                                      width: 30,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.edit, size: 20, color: primaryBlue),
+                                        onPressed: () => _editIncome(docId, data),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+
+                                    // Delete Button
+                                    SizedBox(
+                                      width: 30,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                        onPressed: () => _deleteIncome(docId),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
           );
         },
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: primaryBlue,
-        onPressed: () {
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const AddIncomePage()));
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-}
-
-// Custom widget for better pie chart labels
-class _PieChartCategoryBadge extends StatelessWidget {
-  final Color color;
-  final String text;
-
-  const _PieChartCategoryBadge({required this.color, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }

@@ -1,135 +1,99 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-
+import 'smart_spend_main_page.dart';
 
 class SmartSpendPage extends StatelessWidget {
-  const SmartSpendPage({Key? key}) : super(key: key);
+  const SmartSpendPage({super.key});
 
-  // Fungsi untuk mendapatkan Title Level (Sama seperti cadangan sebelum ini)
-  String getLevelTitle(int points) {
-    if (points >= 200) return "Finance Legend";
-    if (points >= 150) return "Financial Warrior";
-    if (points >= 100) return "Smart Spender";
-    if (points >= 50) return "Budget Explorer";
-    return "Newbie Saver";
-  }
-  
+  final List<Map<String, String>> onboardingQuests = const [
+    {
+      'title': 'Start Your Budgeting Quest',
+      'description': 'Begin your journey to financial stability.',
+      'icon': '🧭',
+    },
+    {
+      'title': 'Claim Your Initial Bounty',
+      'description': 'Earn Smart Points as a reward for discipline.',
+      'icon': '💰',
+    },
+    {
+      'title': 'Beware the Overspending Debuff!',
+      'description': 'Avoid penalties by maintaining your budget.',
+      'icon': '⚠️',
+    },
+  ];
 
-  Future<SmartSpendData> _fetchSmartSpendData() async {
-    // Di sini, anda akan panggil:
-    // 1. Ambil weeklyLimit, monthlyLimit, smartPoints, level dari dokumen user.
-    // 2. Ambil (kalkulasi) total weekly spend & monthly spend dari koleksi expenses.
-    
-    // Data Contoh (Sila Gantikan):
-    await Future.delayed(const Duration(milliseconds: 500));
-    return SmartSpendData(
-      smartPoints: 115,
-      level: 3,
-      weeklyLimit: 100.0,
-      monthlyLimit: 300.0,
-      currentWeeklySpend: 85.0, // Diambil dari expenses_page.dart data
-      currentMonthlySpend: 250.0, // Diambil dari expenses_page.dart data
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('🛡️ Smart Spend Shield'),
-        backgroundColor: Colors.blue.shade800,
+  // Fungsi Widget Card
+  Widget _buildQuestCard(String title, String desc, String icon) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF006D9C),
+            Color(0xFF0099C5),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.amberAccent, width: 2.2),
+        boxShadow: const [
+          BoxShadow(
+            // shadow color using ARGB hex to avoid withOpacity deprecation
+            color: Color(0x59000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      body: FutureBuilder<SmartSpendData>(
-        future: _fetchSmartSpendData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return const Center(child: Text('Gagal memuatkan data Smart Spend.'));
-          }
-
-          final data = snapshot.data!;
-          final String levelTitle = getLevelTitle(data.smartPoints);
-          final Color shieldColor = data.smartPoints >= 100 ? Colors.green.shade600 : Colors.orange.shade800;
-
-          return ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: <Widget>[
-              
-              // --- A. Focus Shield Status Card ---
-              _buildShieldStatusCard(
-                data.smartPoints, 
-                data.level, 
-                levelTitle, 
-                shieldColor,
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // --- B. Ringkasan Disiplin Perbelanjaan ---
-              _buildDisciplineSummary(
-                data.weeklyLimit, 
-                data.currentWeeklySpend, 
-                data.monthlyLimit, 
-                data.currentMonthlySpend,
-              ),
-
-              const SizedBox(height: 20),
-
-              // --- C. History Log (Contoh) ---
-              const Text(
-                'Log Aktiviti Shield',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              _buildActivityLog(), // Fungsi untuk memaparkan log mata
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // Widget: Paparan Focus Shield dan Level
-  Widget _buildShieldStatusCard(
-    int points, 
-    int level, 
-    String levelTitle, 
-    Color shieldColor
-  ) {
-    // Kira peratusan untuk Level Bar (Anggap 50 mata setiap level)
-    final double levelProgress = (points % 50) / 50.0;
-    
-    return Card(
-      elevation: 6,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(18.0),
+        child: Row(
           children: [
-            Text(
-              '${points} Focus Shield',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: shieldColor,
+            Text(icon, style: const TextStyle(fontSize: 40)),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Mini progress bar for gamification
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    // Removed `const` so BorderRadius.circular(...) is allowed
+                    child: FractionallySizedBox(
+                      widthFactor: 0.2, // progress demo
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.amberAccent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  )
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Status: Level $level - $levelTitle',
-              style: const TextStyle(fontSize: 18, color: Colors.black87),
-            ),
-            const SizedBox(height: 15),
-            LinearProgressIndicator(
-              value: levelProgress,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
-              minHeight: 10,
             ),
           ],
         ),
@@ -137,84 +101,132 @@ class SmartSpendPage extends StatelessWidget {
     );
   }
 
-  // Widget: Ringkasan Limit
-  Widget _buildDisciplineSummary(
-    double wLimit, 
-    double wSpend, 
-    double mLimit, 
-    double mSpend
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '🎯 Disiplin Perbelanjaan Semasa',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const Divider(),
-        _buildDisciplineRow('Mingguan', wLimit, wSpend),
-        _buildDisciplineRow('Bulanan', mLimit, mSpend),
-      ],
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    void navigateToNextPage() {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SmartSpendMainPage()),
+      );
+    }
 
-  // Widget: Baris Ringkasan Limit
-  Widget _buildDisciplineRow(String label, double limit, double currentSpend) {
-    final double remaining = limit - currentSpend;
-    final Color textColor = remaining < 0 ? Colors.red : Colors.green;
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF00E0FF),
+              Color(0xFF00A9D6),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
             children: [
-              Text(
-                'RM${currentSpend.toStringAsFixed(2)} / RM${limit.toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              // HERO HEADER
+              Padding(
+                padding: const EdgeInsets.only(top: 35, bottom: 15),
+                child: Column(
+                  children: [
+                    const Text(
+                      "Smart Spend HUB",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          // make Shadow const to allow the outer Text to be const
+                          Shadow(
+                            blurRadius: 10,
+                            color: Colors.black38,
+                            offset: Offset(0, 3),
+                          )
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Level 1 • Financial Adventurer",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // POINT BADGE
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF143A66),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(color: Colors.white, width: 1.4),
+                        boxShadow: const [
+                          BoxShadow(
+                            // ARGB hex for ~0.4 opacity on blueAccent
+                            color: Color(0x664488FF),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        "🏆 100 Smart Points",
+                        style: TextStyle(
+                          color: Color(0xFFFFEB3B),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  ],
+                ),
               ),
-              Text(
-                remaining < 0 
-                  ? 'Overspent: RM${remaining.abs().toStringAsFixed(2)}'
-                  : 'Baki: RM${remaining.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 12, color: textColor),
+
+              // LIST OF QUEST CARDS
+              Expanded(
+                child: ListView(
+                  children: onboardingQuests.map((q) {
+                    return _buildQuestCard(
+                      q['title']!,
+                      q['description']!,
+                      q['icon']!,
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              // GET STARTED BUTTON
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 25),
+                child: ElevatedButton(
+                  onPressed: navigateToNextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amberAccent,
+                    elevation: 12,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: const BorderSide(
+                          color: Colors.deepOrange, width: 3),
+                    ),
+                    minimumSize: const Size(double.infinity, 55),
+                  ),
+                  child: const Text(
+                    "START MISSION",
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
+                  ),
+                ),
               ),
             ],
           ),
-        ],
+        ),
       ),
-    );
-  }
-  
-  // Widget: Log Aktiviti (Log Penambahan/Penolakan Mata)
-  Widget _buildActivityLog() {
-    // Ini perlu ditarik dari koleksi 'point_history' anda
-    final List<Map<String, dynamic>> log = [
-      {'date': '15 Nov', 'action': '+20', 'desc': 'Ganjaran 3 Minggu Disiplin'},
-      {'date': '10 Nov', 'action': '-12', 'desc': 'Overspend had mingguan'},
-      {'date': '08 Nov', 'action': '+5', 'desc': 'Perbelanjaan <80% limit'},
-    ];
-    
-    return Column(
-      children: log.map((item) {
-        final bool isDeduction = item['action'].startsWith('-');
-        final Color actionColor = isDeduction ? Colors.red : Colors.green;
-        return ListTile(
-          leading: Icon(
-            isDeduction ? Icons.arrow_downward : Icons.arrow_upward,
-            color: actionColor,
-          ),
-          title: Text(item['desc']),
-          trailing: Text(
-            item['action'],
-            style: TextStyle(fontWeight: FontWeight.bold, color: actionColor),
-          ),
-          subtitle: Text(item['date']),
-        );
-      }).toList(),
     );
   }
 }
