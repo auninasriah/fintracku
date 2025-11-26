@@ -1,9 +1,12 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart' as fb_opt;
 
 import 'splash_page.dart';
 import 'onboarding_page.dart';
+import 'login_page.dart';
+import 'create_account.dart';
 import 'home_page.dart'; // contains MainShell
 
 /// 🎨 Theme colors
@@ -51,14 +54,20 @@ class FinTrackUApp extends StatelessWidget {
       ),
 
       /// 🕐 Start with Splash Page
-      home: const SplashPage(),
+      initialRoute: '/splash',
 
       /// 🧭 Named routes for navigation
       routes: {
-        '/splash': (context) => const SplashPage(),
-        '/onboarding': (context) => const OnboardingPage(),
-        '/home': (context) => const MainShell(),
-      },
+      '/splash': (context) => const SplashPage(),
+      '/onboarding': (context) => const OnboardingPage(),
+
+      // LOGIN (dengan args)
+      '/login': (context) => const LoginPage(),
+      '/create-account': (context) => const CreateAccountPage(),
+      '/home': (context) => const HomePage(),
+    },
+
+
     );
   }
 }

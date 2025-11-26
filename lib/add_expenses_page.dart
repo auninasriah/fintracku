@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';   // ✅ ADDED
 
 // Your existing color constants
-const _primary = Color.fromARGB(255, 105, 158, 218); // Light Blue
-const _accent = Color(0xFF234A78); // Dark Blue (Used for background/app bar in new design)
+const _primary = Color.fromARGB(255, 105, 158, 218); 
+const _accent = Color(0xFF234A78);
 
 class AddExpensePage extends StatefulWidget {
   final String? existingId;
@@ -18,10 +19,9 @@ class AddExpensePage extends StatefulWidget {
 
 class _AddExpensePageState extends State<AddExpensePage> {
   final _formKey = GlobalKey<FormState>();
-  final CollectionReference expensesCol = FirebaseFirestore.instance
-      .collection('users')
-      .doc('local_user') // replace with actual UID in production
-      .collection('expenses');
+
+  // ✅ NEW — FIXED (declare only)
+  late CollectionReference expensesCol;
 
   late TextEditingController _amountController;
   late TextEditingController _noteController;
@@ -41,15 +41,36 @@ class _AddExpensePageState extends State<AddExpensePage> {
   void initState() {
     super.initState();
 
+    // ✅ Initialize Firestore with Auth user
+    final user = FirebaseAuth.instance.currentUser;
+
+    expensesCol = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user?.uid ?? "null_user")
+        .collection('expenses');
+
+    // 🟦 Your existing initState logic (unchanged)
     _amountController = TextEditingController(
-        text: widget.existingData != null ? widget.existingData!['amount'].toString() : '');
+      text: widget.existingData != null
+          ? widget.existingData!['amount'].toString()
+          : '',
+    );
+
     _noteController = TextEditingController(
-        text: widget.existingData != null ? widget.existingData!['note'] ?? '' : '');
-    _category = widget.existingData != null ? widget.existingData!['category'] ?? 'Others' : 'Others';
+      text: widget.existingData != null
+          ? widget.existingData!['note'] ?? ''
+          : '',
+    );
+
+    _category = widget.existingData != null
+        ? widget.existingData!['category'] ?? 'Others'
+        : 'Others';
+
     _selectedDate = widget.existingData != null
         ? (widget.existingData!['date'] is Timestamp
             ? (widget.existingData!['date'] as Timestamp).toDate()
-            : DateTime.tryParse(widget.existingData!['date'].toString()) ?? DateTime.now())
+            : DateTime.tryParse(widget.existingData!['date'].toString()) ??
+                DateTime.now())
         : DateTime.now();
   }
 
@@ -76,16 +97,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
     try {
       if (widget.existingId != null) {
-        // EDIT
-        await expensesCol.doc(widget.existingId).update(data);
+        await expensesCol.doc(widget.existingId).update(data); // EDIT
       } else {
-        // ADD NEW
-        await expensesCol.add(data);
+        await expensesCol.add(data); // ADD
       }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.existingId != null ? 'Expense updated' : 'Expense added')),
+        SnackBar(
+          content: Text(
+              widget.existingId != null ? 'Expense updated' : 'Expense added'),
+        ),
       );
       Navigator.pop(context);
     } catch (e) {

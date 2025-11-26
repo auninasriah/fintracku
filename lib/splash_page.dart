@@ -1,7 +1,10 @@
+// splash_page.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'onboarding_page.dart';
+import 'home_page.dart'; // MainShell
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -12,16 +15,17 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
+
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
 
-  // ✨ Bright cyan background color based on the requested image
-  static const Color brightCyan = Color(0xFF00CFFF); 
+  static const Color brightCyan = Color(0xFF00CFFF);
 
   @override
   void initState() {
     super.initState();
 
+    // Animation setup
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -33,35 +37,21 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _startSplashSequence() async {
+    // Wait 2 seconds
     await Future.delayed(const Duration(seconds: 2));
-    await _checkUserStatus();
-  }
 
-  Future<void> _checkUserStatus() async {
-    try {
-      // NOTE: This logic assumes Firebase is correctly initialized elsewhere in the application.
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc('local_user')
-          .get();
+    if (!mounted) return;
 
-      if (!mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
 
-      final bool isExistingUser =
-          userDoc.exists && (userDoc.data()?['name'] as String?)?.isNotEmpty == true;
-
-      if (isExistingUser) {
-        // Assuming a route named '/home' exists
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const OnboardingPage()),
-        );
-      }
-    } catch (e) {
-      // Handle potential errors (e.g., Firestore not reachable) by moving to onboarding
-      if (!mounted) return;
-      // print('Error checking user status: $e'); // Optional: for debugging
+    // 🔥 NEW LOGIC — ikut Flow C
+    if (user != null) {
+      // User already logged in → Go Home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+      );
+    } else {
+      // User NOT logged in → Go Onboarding
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
       );
@@ -77,17 +67,16 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Changed background color to the new bright cyan color
-      backgroundColor: brightCyan, 
+      backgroundColor: brightCyan,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              
+              // Logo
               Image.asset(
-                'assets/images/abc.png',
+                'assets/images/logo.png',
                 width: 200,
                 height: 200,
                 fit: BoxFit.contain,
@@ -95,20 +84,19 @@ class _SplashPageState extends State<SplashPage>
 
               const SizedBox(height: 130),
 
-              // --- Gradient Title ---
+              // Gradient text title
               ShaderMask(
                 shaderCallback: (Rect bounds) {
                   return const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    // Keeping the original gradient colors for the text for contrast
                     colors: [
-                      Color(0xFF1D75CF), // deep blue
-                      Color(0xFF18C47F), // teal-green
+                      Color(0xFF1D75CF),
+                      Color(0xFF18C47F),
                     ],
                   ).createShader(bounds);
                 },
-               
+            
               ),
             ],
           ),

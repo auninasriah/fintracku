@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddIncomePage extends StatefulWidget {
   final String? incomeId;
@@ -23,20 +24,26 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
   bool get isEditing => widget.incomeId != null;
 
-  final CollectionReference incomes = FirebaseFirestore.instance
-      .collection('users')
-      .doc('local_user')
-      .collection('income');
+  // 🔥 FIX — declare only the variable
+  late CollectionReference incomes;
 
   @override
   void initState() {
     super.initState();
+
+    // 🔥 FIX — initialize Firebase Auth here
+    final user = FirebaseAuth.instance.currentUser;
+    incomes = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user?.uid ?? "null_user")
+        .collection('income');
+
+    // Load editing data
     if (isEditing && widget.existingData != null) {
       final data = widget.existingData!;
       _categoryController.text = data['category'] ?? '';
-      _amountController.text = (data['amount'] is num)
-          ? (data['amount'] as num).toString()
-          : '';
+      _amountController.text =
+          (data['amount'] is num) ? (data['amount']).toString() : '';
       _noteController.text = data['note'] ?? '';
       if (data['date'] is Timestamp) {
         _selectedDate = (data['date'] as Timestamp).toDate();
@@ -68,7 +75,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
       }
       return;
     }
-    
+
     if (_selectedDate == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,10 +125,8 @@ class _AddIncomePageState extends State<AddIncomePage> {
       lastDate: DateTime(2035),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme:
-                const ColorScheme.light(primary: Color(0xFF11355F)),
-          ),
+          data: ThemeData.light()
+              .copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF11355F))),
           child: child!,
         );
       },
@@ -131,7 +136,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
     }
   }
 
-  // --- Custom Input Field Widget (Enhanced) ---
+  // --- Custom Input Field Widget ---
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -183,7 +188,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
     );
   }
 
-  // --- Date Picker Widget (Enhanced) ---
+  // --- Date Picker Widget ---
   Widget _buildDatePicker() {
     final displayDate = _selectedDate == null
         ? "Select Date"
@@ -233,8 +238,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
     );
   }
 
-
-  // --- Main Build Method (Redesigned) ---
+  // --- Main Build ---
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF11355F);
@@ -242,7 +246,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom != 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD), 
+      backgroundColor: const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
           isEditing ? "Edit Income ✏️" : "New Income 💸",
@@ -257,7 +261,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Gradient Header with Icon
+            // Header…
             Container(
               padding: const EdgeInsets.fromLTRB(24, 40, 24, 60),
               width: double.infinity,
@@ -282,7 +286,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back Button 
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
@@ -310,8 +313,8 @@ class _AddIncomePageState extends State<AddIncomePage> {
                 ],
               ),
             ),
-            
-            // 2. Form Container 
+
+            // Form…
             Transform.translate(
               offset: const Offset(0, -30),
               child: Padding(
@@ -368,7 +371,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
                         ),
                         const SizedBox(height: 30),
 
-                        // 3. Save Button (Green Gradient for Income)
                         GestureDetector(
                           onTap: _isSaving ? null : _saveIncome,
                           child: Container(
@@ -378,7 +380,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                               gradient: _isSaving
                                   ? null
                                   : const LinearGradient(
-                                      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)], 
+                                      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
@@ -397,7 +399,9 @@ class _AddIncomePageState extends State<AddIncomePage> {
                                   ? const CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2)
                                   : Text(
-                                      isEditing ? "UPDATE INCOME" : "SAVE INCOME",
+                                      isEditing
+                                          ? "UPDATE INCOME"
+                                          : "SAVE INCOME",
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,

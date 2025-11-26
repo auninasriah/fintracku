@@ -1,7 +1,8 @@
-// ...existing code...
+// home_page.dart
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'dart:math'; // For min/max in progress bar
 
@@ -9,7 +10,8 @@ import 'dart:math'; // For min/max in progress bar
 import 'income_page.dart';
 import 'expenses_page.dart';
 import 'budget_page.dart';
-import 'smart_spend_page.dart'; 
+// ignore: unused_import
+import 'smart_spend_page.dart';
 
 // --- COLOR DEFINITIONS ---
 const Color primaryBlue = Color(0xFF11355F); // Dark Navy Blue
@@ -36,6 +38,16 @@ class FinancePage extends StatelessWidget {
   }
 }
 
+class SmartSpendPage extends StatelessWidget {
+  const SmartSpendPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Smart Spend')),
+      body: const Center(child: Text('Smart Spend features go here')),
+    );
+  }
+}
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -48,7 +60,7 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-// ================= CHAT ASSISTANT WIDGET (NEW) =================
+// ================= CHAT ASSISTANT WIDGET =================
 
 /// Represents a single message in the chat.
 class ChatMessage {
@@ -75,7 +87,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [
     ChatMessage(
-      text: "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
+      text:
+          "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
       sender: 'assistant',
       timestamp: DateTime.now(),
     ),
@@ -86,20 +99,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // 1. Add user message
     setState(() {
       _messages.add(ChatMessage(text: text, sender: 'user', timestamp: DateTime.now()));
       _controller.clear();
       _isSending = true;
     });
 
-    // Scroll to the bottom to show the new user message
     _scrollToBottom();
 
-    // 2. Simulate AI API call (replace this with actual Gemini API call)
     final assistantResponse = await _getAssistantResponse(text);
 
-    // 3. Add assistant response
     setState(() {
       _messages.add(ChatMessage(
         text: assistantResponse,
@@ -109,25 +118,22 @@ class _ChatScreenState extends State<ChatScreen> {
       _isSending = false;
     });
 
-    // Scroll to the bottom to show the new assistant message
     _scrollToBottom();
   }
 
   Future<String> _getAssistantResponse(String prompt) async {
-    // --- START: GEMINI API PLACEHOLDER ---
-    // In a real Flutter app, you would make an HTTP request here.
     await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
 
-    if (prompt.toLowerCase().contains('budget') || prompt.toLowerCase().contains('spending')) {
+    final p = prompt.toLowerCase();
+    if (p.contains('budget') || p.contains('spending')) {
       return "Budgeting tip: Try the '50/30/20 Rule'—50% needs, 30% wants, 20% savings. Our Budget tab can help you track this!";
-    } else if (prompt.toLowerCase().contains('expense')) {
+    } else if (p.contains('expense')) {
       return "To track a new expense, simply tap the 'Expenses' button in the Quick Actions section on the Home Page.";
-    } else if (prompt.toLowerCase().contains('hello') || prompt.toLowerCase().contains('hi')) {
+    } else if (p.contains('hello') || p.contains('hi')) {
       return "Hi there! How can I assist you with your finances today? Try asking for a budgeting tip!";
     } else {
       return "I'm focusing on student finance advice. Can you ask me about budgeting, saving, or tracking expenses?";
     }
-    // --- END: GEMINI API PLACEHOLDER ---
   }
 
   void _scrollToBottom() {
@@ -140,6 +146,13 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -247,7 +260,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-
 // ================= MAIN SHELL (UNCHANGED) =================
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -259,11 +271,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    SafeArea(child: HomePage()), // HomePage is now Stateful
-    SmartSpendPage(),
-    BudgetPage(),
-    SettingsPage(),
+  final List<Widget> _pages = [
+   const  SafeArea(child: HomePage()), // HomePage is Stateful below
+   const SmartSpendPage(),
+   const BudgetPage(),
+   const SettingsPage(),
   ];
 
   void _onNavTapped(int index) {
@@ -282,7 +294,7 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-// ================= AUTO SLIDING CAROUSEL (UNCHANGED) =================
+// ================= AUTO SLIDING CAROUSEL =================
 class AutoSlidingInfoCarousel extends StatefulWidget {
   const AutoSlidingInfoCarousel({super.key});
 
@@ -300,25 +312,29 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
       'title': 'Student Budgeting 101',
       'subtitle': 'Spend less than you earn! Track your money diligently.',
       'color': const Color(0xFF00ADB5), // Teal
-      'imageUrl': 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'imageUrl':
+          'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       'title': 'The Power of Habit',
       'subtitle': 'Your tiny daily spending habits define your financial future.',
       'color': const Color(0xFF2E8BC0), // Bright Blue
-      'imageUrl': 'https://images.unsplash.com/photo-1579621970795-87facc2f976d?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'imageUrl':
+          'https://images.unsplash.com/photo-1579621970795-87facc2f976d?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       'title': 'Need a Side Hustle?',
       'subtitle': 'Explore simple ways to earn extra cash between classes.',
       'color': const Color(0xFF6A1B9A), // Deep Purple
-      'imageUrl': 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTl8fHNpZGUlMjBodXN0bGV8ZW58MHx8fHwxNjk5NDQ1Mjg0fDA&ixlib=rb-4.0.3&q=80&w=1080',
+      'imageUrl':
+          'https://images.unsplash.com/photo-1517048676732-d65bc937f952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTl8fHNpZGUlMjBodXN0bGV8ZW58MHx8fHwxNjk5NDQ1Mjg0fDA&ixlib=rb-4.0.3&q=80&w=1080',
     },
     {
       'title': 'Pay Yourself First',
       'subtitle': 'Save a small amount immediately after receiving your allowance.',
       'color': const Color(0xFFC62828), // Red
-      'imageUrl': 'https://images.unsplash.com/photo-1593341646782-adf922880b26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTV8fHNhdmV8ZW58MHx8fHwxNjk5NDQ1NjUzfDA&ixlib=rb-4.0.3&q=80&w=1080',
+      'imageUrl':
+          'https://images.unsplash.com/photo-1593341646782-adf922880b26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTV8fHNhdmV8ZW58MHx8fHwxNjk5NDQ1NjUzfDA&ixlib=rb-4.0.3&q=80&w=1080',
     },
   ];
 
@@ -332,7 +348,6 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
     _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (_pageController.hasClients) {
         int nextPage = (_currentPage + 1) % carouselItems.length;
-
         _pageController.animateToPage(
           nextPage,
           duration: const Duration(milliseconds: 400),
@@ -360,10 +375,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
         color: color,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(
-              color: color.withAlpha(50),
-              blurRadius: 10,
-              offset: const Offset(0, 5))
+          BoxShadow(color: color.withAlpha(50), blurRadius: 10, offset: const Offset(0, 5))
         ],
       ),
       child: Stack(
@@ -380,9 +392,8 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
                 fit: BoxFit.cover,
                 width: 150,
                 opacity: const AlwaysStoppedAnimation(0.3),
-                errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Icon(LucideIcons.image,
-                        color: Colors.white54, size: 80)),
+                errorBuilder: (context, error, stackTrace) =>
+                    const Center(child: Icon(LucideIcons.image, color: Colors.white54, size: 80)),
               ),
             ),
           ),
@@ -477,7 +488,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
   }
 }
 
-// ================= HOME PAGE (UPDATED - CLEANER ACTIONS) =================
+// ================= HOME PAGE (UI preserved, AUTH FIXED) =================
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -489,14 +500,19 @@ class _HomePageState extends State<HomePage> {
   // State variable to control balance visibility
   bool _isBalanceVisible = true;
   // Placeholder budget for the spending card logic
-  final double _monthlyBudgetGoal = 1200.00; 
+  final double _monthlyBudgetGoal = 1200.00;
 
-  // --- Firestore Stream for Income ---
+  // Get current user once
+  User? get _user => FirebaseAuth.instance.currentUser;
+
+  // --- Firestore Stream for Income (AUTH SAFE) ---
   Stream<double> _getTotalIncomeStream() {
-    final userId = 'local_user';
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+
     return FirebaseFirestore.instance
         .collection('users')
-        .doc(userId)
+        .doc(user.uid)
         .collection('income')
         .snapshots()
         .map((snapshot) {
@@ -513,19 +529,19 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // --- New Firestore Stream for Expenses ---
+  // --- Firestore Stream for Expenses (AUTH SAFE) ---
   Stream<double> _getTotalExpensesStream() {
-    // Determine the start and end of the current month
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
     final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-    final userId = 'local_user';
     return FirebaseFirestore.instance
         .collection('users')
-        .doc(userId)
+        .doc(user.uid)
         .collection('expenses')
-        // Filter by date for the current month (assuming a 'timestamp' field)
         .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
         .where('timestamp', isLessThanOrEqualTo: endOfMonth)
         .snapshots()
@@ -543,17 +559,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-
+ // ...existing code...
   // --- WIDGET 1: Gradient Income Card (Balance Card) ---
   Widget _incomeCard(BuildContext context) {
-    // Note: This card still uses Total Income.
     return StreamBuilder<double>(
       stream: _getTotalIncomeStream(),
       builder: (context, snapshot) {
         final balance = snapshot.data ?? 0.0;
-        final displayBalance = _isBalanceVisible
-            ? balance.toStringAsFixed(2)
-            : '******'; // Hide balance logic
+        final displayBalance = _isBalanceVisible ? balance.toStringAsFixed(2) : '******'; // Hide balance logic
         final displayIcon = _isBalanceVisible ? LucideIcons.eye : LucideIcons.eyeOff;
 
         return Container(
@@ -569,66 +582,100 @@ class _HomePageState extends State<HomePage> {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(35), 
+              bottomLeft: Radius.circular(35),
               bottomRight: Radius.circular(35),
             ),
             boxShadow: [
-              BoxShadow(
-                  color: cardShadowColor, blurRadius: 10, offset: Offset(0, 5))
+              BoxShadow(color: cardShadowColor, blurRadius: 10, offset: Offset(0, 5))
             ],
           ),
-          child: Column(
+          // Use Stack so we can position the logout button in the top-right
+          child: Stack(
             children: [
-              // Title
-              const Text(
-                'Total Income',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Balance Display
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Column(
                 children: [
-                  Text(
-                    _isBalanceVisible ? 'RM ' : '', // Only show RM when visible
-                    style: const TextStyle(color: Colors.white70, fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    displayBalance,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32, 
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2),
-                  ),
-
-                  // Toggle Button
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isBalanceVisible = !_isBalanceVisible;
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: Icon(displayIcon, color: Colors.white70, size: 22),
+                  // Title
+                  const Text(
+                    'Total Income',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                  const SizedBox(height: 14),
+
+                  // Balance Display
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _isBalanceVisible ? 'RM ' : '', // Only show RM when visible
+                        style: const TextStyle(color: Colors.white70, fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        displayBalance,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                      ),
+
+                      // Toggle Button
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isBalanceVisible = !_isBalanceVisible;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Icon(displayIcon, color: Colors.white70, size: 22),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Loading indicator
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2),
+                    ),
                 ],
               ),
 
-              // Loading indicator
-              if (snapshot.connectionState == ConnectionState.waiting)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: CircularProgressIndicator(
-                      color: Colors.white70, strokeWidth: 2),
+              // Logout button positioned top-right
+              Positioned(
+                right: 12,
+                top: 6,
+                child: IconButton(
+                  icon: const Icon(LucideIcons.logOut, color: Colors.white, size: 22),
+                  tooltip: 'Logout',
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('ARE YOU SURE YOU WANT TO LOGOUT'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      await FirebaseAuth.instance.signOut();
+                      if (!mounted) return;
+                      Navigator.pushReplacementNamed(context, '/login');
+                    }
+                  },
                 ),
+              ),
             ],
           ),
         );
@@ -636,19 +683,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- WIDGET 2: Quick Actions (Reverted Icons and Simplified Colors) ---
+
+  // --- WIDGET 2: Quick Actions ---
   Widget _quickActions(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      padding: const EdgeInsets.all(16), 
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22), 
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withAlpha(15),
-              blurRadius: 10,
-              offset: const Offset(0, 5))
+          BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 10, offset: const Offset(0, 5))
         ],
       ),
       child: Column(
@@ -669,10 +714,9 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Reverted to original icons and using primaryBlue for color
-              _actionItem(context, LucideIcons.wallet, 'Income', const IncomePage(), primaryBlue), 
-              _actionItem(context, LucideIcons.trendingDown, 'Expenses', const ExpensesPage(), primaryBlue), 
-              _actionItem(context, LucideIcons.barChart2, 'Finance', const FinancePage(), primaryBlue), 
+              _actionItem(context, LucideIcons.wallet, 'Income', const IncomePage(), primaryBlue),
+              _actionItem(context, LucideIcons.trendingDown, 'Expenses', const ExpensesPage(), primaryBlue),
+              _actionItem(context, LucideIcons.barChart2, 'Finance', const FinancePage(), primaryBlue),
             ],
           ),
         ],
@@ -691,33 +735,28 @@ class _HomePageState extends State<HomePage> {
               color: actionIconBackground,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 4))
+                BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 4))
               ],
             ),
-            // Icon color is now primaryBlue (passed as iconColor)
-            child: Icon(icon, size: 28, color: iconColor), 
+            child: Icon(icon, size: 28, color: iconColor),
           ),
           const SizedBox(height: 8),
-          // Text color is now primaryBlue
-          Text(label, style: const TextStyle(fontSize: 12, color: primaryBlue, fontWeight: FontWeight.w600)), 
+          Text(label, style: const TextStyle(fontSize: 12, color: primaryBlue, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  // --- WIDGET 3 (NEW): Current Month's Spending Summary Card ---
+  // --- WIDGET 3: Current Month's Spending Summary Card ---
   Widget _currentSpendingCard(BuildContext context) {
     return StreamBuilder<double>(
       stream: _getTotalExpensesStream(),
       builder: (context, snapshot) {
         final currentSpending = snapshot.data ?? 0.0;
         final budgetGoal = _monthlyBudgetGoal;
-        
-        // Calculate the progress percentage (clamped between 0.0 and 1.0)
+
         final progress = min(currentSpending / budgetGoal, 1.0);
-        
-        // Determine color based on progress (red if over 80%)
+
         final progressColor = progress > 0.8 ? spendingRed : cardGradientEnd;
 
         return GestureDetector(
@@ -729,10 +768,7 @@ class _HomePageState extends State<HomePage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Colors.grey.shade200),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
-              ],
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,7 +778,7 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryBlue),
                 ),
                 const SizedBox(height: 10),
-                
+
                 // Spending Amount
                 Text(
                   'RM ${currentSpending.toStringAsFixed(2)}',
@@ -760,8 +796,6 @@ class _HomePageState extends State<HomePage> {
                   backgroundColor: Colors.grey.shade200,
                   valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   minHeight: 10,
-                  // borderRadius is supported in newer Flutter; if your SDK doesn't support it, remove this line.
-                  borderRadius: BorderRadius.circular(5),
                 ),
                 const SizedBox(height: 8),
 
@@ -779,7 +813,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 10),
                 // Call to action button
                 Row(
@@ -802,6 +836,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // If the user isn't logged in, show a simple placeholder and allow navigation to login.
+    if (_user == null) {
+      return Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+            child: const Text('Login to view dashboard'),
+          ),
+        ),
+      );
+    }
+
     return Stack(
       children: [
         Column(
@@ -814,11 +860,9 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     _quickActions(context),
                     const SizedBox(height: 18),
-                    
-                    _currentSpendingCard(context), 
-
+                    _currentSpendingCard(context),
                     const SizedBox(height: 24),
-                    
+
                     // Additional Tips Section
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20.0),
@@ -827,10 +871,11 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black, 
+                          color: Colors.black,
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 12),
                     const AutoSlidingInfoCarousel(),
                     const SizedBox(height: 40),
@@ -841,13 +886,12 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
 
-        // --- 2. Floating Chat Button (Positioned at the bottom right) ---
+        // --- Floating Chat Button (Positioned at the bottom right) ---
         Positioned(
           right: 20,
           bottom: 20,
           child: FloatingActionButton(
             onPressed: () {
-              // Navigate to the full-screen ChatScreen
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const ChatScreen()),
               );
@@ -856,7 +900,7 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: primaryBlue,
             shape: const CircleBorder(),
             child: const Icon(
-              LucideIcons.messageSquare, 
+              LucideIcons.messageSquare,
               color: Colors.white,
               size: 28,
             ),
@@ -866,7 +910,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
 
 // ================= BEAUTIFUL CUSTOM BOTTOM NAV =================
 class CustomBottomNav extends StatelessWidget {
@@ -885,8 +928,7 @@ class CustomBottomNav extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
       decoration: BoxDecoration(
         color: const Color(0xEBFFFFFF), // Colors.white.withOpacity(0.92)
-        borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: const Color(0x14000000), // Colors.black.withOpacity(0.08)
@@ -953,4 +995,3 @@ class CustomBottomNav extends StatelessWidget {
     );
   }
 }
-// ...existing code...

@@ -1,4 +1,4 @@
-package com.example.fintracku
+package com.example.fintrack
 
 import io.flutter.embedding.android.FlutterActivity
 

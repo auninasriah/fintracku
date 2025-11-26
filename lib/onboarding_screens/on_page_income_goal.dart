@@ -1,78 +1,76 @@
-// on_page_income_goal.dart
-
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import '../onboarding_page.dart'; // PASTI PATH BETUL
-
-// DEFINISI FUNGSI UTILITY TYPE
-typedef IllustrationAreaBuilder = Widget Function(IconData icon, String title);
-typedef VibrantCardTextFieldBuilder = Widget Function({
-  required TextEditingController controller,
-  required String label,
-  required IconData icon,
-  TextInputType keyboardType,
-});
-typedef GoalCardBuilder = Widget Function(String title);
-typedef GoalSetter = void Function(String? newGoal); // Setter type
 
 class OnPageIncomeGoal extends StatelessWidget {
   final TextEditingController incomeController;
-  final String? goal; // State
-  final GoalSetter setGoal; // Setter
-  final IllustrationAreaBuilder buildIllustrationArea; // Utility 1
-  final VibrantCardTextFieldBuilder buildVibrantCardTextField; // Utility 2
-  final GoalCardBuilder buildGoalCardForVibrantTheme; // Utility 3
+  final String? currentGoal;
+  final ValueChanged<String?> onGoalSelected;
 
   const OnPageIncomeGoal({
     super.key,
     required this.incomeController,
-    required this.goal,
-    required this.setGoal,
-    required this.buildIllustrationArea,
-    required this.buildVibrantCardTextField,
-    required this.buildGoalCardForVibrantTheme,
+    required this.currentGoal,
+    required this.onGoalSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          buildIllustrationArea(LucideIcons.banknote, 'Financial Goals'),
-          const SizedBox(height: 30),
-          const Text(
-            'Monthly Income (MYR)',
-            style: TextStyle(
-                color: accentPrimary, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          // Panggil fungsi utility yang dihantar
-          buildVibrantCardTextField(
-            controller: incomeController,
-            label: 'Monthly Income',
-            icon: LucideIcons.wallet,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 40),
-          const Text(
-            'What is your main goal?',
-            style: TextStyle(
-                color: accentPrimary, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 15),
-          Wrap(
-            spacing: 15,
-            runSpacing: 15,
-            children: [
-              buildGoalCardForVibrantTheme('Save'),
-              buildGoalCardForVibrantTheme('Invest'),
-              buildGoalCardForVibrantTheme('Debt Reduction'),
-              buildGoalCardForVibrantTheme('Retirement'),
-            ],
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.all(26),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Monthly Income",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+
+            TextField(
+              controller: incomeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: "Enter your income (MYR)",
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            const Text(
+              "Choose your main goal",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 14),
+
+            Wrap(
+              spacing: 10,
+              children: [
+                _buildChip("Save"),
+                _buildChip("Invest"),
+                _buildChip("Debt Reduction"),
+                _buildChip("Retirement"),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(String text) {
+    final bool isSelected = currentGoal == text;
+
+    return ChoiceChip(
+      label: Text(text),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        if (selected) onGoalSelected(text);
+      },
+      selectedColor: Colors.blueAccent,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.black,
       ),
     );
   }

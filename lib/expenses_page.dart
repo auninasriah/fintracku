@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'add_expenses_page.dart'; 
@@ -30,19 +31,27 @@ class ExpensesPage extends StatefulWidget {
 }
 
 class _ExpensesPageState extends State<ExpensesPage> {
-  final CollectionReference expensesCol = FirebaseFirestore.instance
-      .collection('users')
-      .doc('local_user') // 🔁 replace with auth UID later
-      .collection('expenses');
+ 
+  late CollectionReference expensesCol;
+
 
   DateTime displayedMonth = DateTime.now();
   late String selectedMonth;
 
   @override
-  void initState() {
-    super.initState();
-    selectedMonth = _getMonthName(displayedMonth.month);
-  }
+void initState() {
+  super.initState();
+
+  final user = FirebaseAuth.instance.currentUser;
+
+  expensesCol = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user?.uid ?? "null_user")
+      .collection('expenses');
+
+  selectedMonth = _getMonthName(displayedMonth.month);
+}
+
 
   // Helper: Month name long
   static String monthName(DateTime d) => DateFormat('MMMM yyyy').format(d);
