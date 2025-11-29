@@ -46,7 +46,7 @@ void initState() {
 
   expensesCol = FirebaseFirestore.instance
       .collection('users')
-      .doc(user?.uid ?? "null_user")
+      .doc(user!.uid)
       .collection('expenses');
 
   selectedMonth = _getMonthName(displayedMonth.month);

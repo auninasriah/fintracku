@@ -9,8 +9,7 @@ import 'dart:math'; // For min/max in progress bar
 // Import your pages (assuming these are defined elsewhere)
 import 'income_page.dart';
 import 'expenses_page.dart';
-import 'budget_page.dart';
-// ignore: unused_import
+import 'savings_page.dart';
 import 'smart_spend_page.dart';
 
 // --- COLOR DEFINITIONS ---
@@ -34,17 +33,6 @@ class FinancePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Finance')),
       body: const Center(child: Text('This is the Finance page.')),
-    );
-  }
-}
-
-class SmartSpendPage extends StatelessWidget {
-  const SmartSpendPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Smart Spend')),
-      body: const Center(child: Text('Smart Spend features go here')),
     );
   }
 }
@@ -274,7 +262,7 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _pages = [
    const  SafeArea(child: HomePage()), // HomePage is Stateful below
    const SmartSpendPage(),
-   const BudgetPage(),
+   const SavingsPage(),
    const SettingsPage(),
   ];
 
