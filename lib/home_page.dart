@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'dart:math'; // For min/max in progress bar
+import 'dart:math'; 
+
 
 // Import your pages (assuming these are defined elsewhere)
 import 'income_page.dart';
 import 'expenses_page.dart';
 import 'savings_page.dart';
 import 'smart_spend_page.dart';
+import 'smart_spend_main_page.dart';
+import 'finance_page.dart'; 
 
 // --- COLOR DEFINITIONS ---
 const Color primaryBlue = Color(0xFF11355F); // Dark Navy Blue
@@ -26,16 +30,6 @@ const Color spendingRed = Color(0xFFC62828);
 const Color spendingGreen = Color(0xFF4CAF50);
 
 // ================= PLACEHOLDER PAGES (For navigation) =================
-class FinancePage extends StatelessWidget {
-  const FinancePage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Finance')),
-      body: const Center(child: Text('This is the Finance page.')),
-    );
-  }
-}
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -97,6 +91,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final assistantResponse = await _getAssistantResponse(text);
 
+    if (!mounted) return; // ✅ FIXED: Guard with mounted check
+
     setState(() {
       _messages.add(ChatMessage(
         text: assistantResponse,
@@ -147,7 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Finance Assistant'),
+        title: Text('AI Finance Assistant', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         backgroundColor: cardGradientStart,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -180,8 +176,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: Text(
                       message.text,
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         color: isUser ? Colors.white : Colors.black87,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ),
@@ -205,8 +203,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: _controller,
                     enabled: !_isSending,
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
                     decoration: InputDecoration(
                       hintText: _isSending ? 'Assistant is typing...' : 'Ask a finance question...',
+                      hintStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25.0),
                         borderSide: BorderSide.none,
@@ -248,6 +248,94 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+// ================= ANIMATED PATTERN BACKGROUND =================
+class AnimatedPatternBackground extends StatefulWidget {
+  const AnimatedPatternBackground({super.key});
+
+  @override
+  State<AnimatedPatternBackground> createState() => _AnimatedPatternBackgroundState();
+}
+
+class _AnimatedPatternBackgroundState extends State<AnimatedPatternBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: PatternPainter(_controller.value),
+          child: Container(),
+        );
+      },
+    );
+  }
+}
+
+class PatternPainter extends CustomPainter {
+  final double animationValue;
+
+  PatternPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.08) // ✅ FIXED: Replaced withOpacity
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final spacing = 40.0;
+    final offset = animationValue * spacing * 2;
+
+    // Draw animated diagonal lines
+    for (double i = -spacing; i < size.width + size.height; i += spacing) {
+      final startX = i - offset;
+      final startY = 0.0;
+      final endX = i - offset + size.height;
+      final endY = size.height;
+
+      canvas.drawLine(
+        Offset(startX, startY),
+        Offset(endX, endY),
+        paint,
+      );
+    }
+
+    // Draw animated circles
+    final circlePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.05) // ✅ FIXED: Replaced withOpacity
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 5; i++) {
+      final circleOffset = (animationValue + i * 0.2) % 1.0;
+      final x = size.width * circleOffset;
+      final y = size.height * 0.3 + sin(circleOffset * pi * 2) * 30;
+      canvas.drawCircle(Offset(x, y), 20, circlePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(PatternPainter oldDelegate) => true;
+}
+
+
 // ================= MAIN SHELL (UNCHANGED) =================
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -258,13 +346,51 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  bool _hasCheckedOnboarding = false;
+  bool _hasSeenSmartSpendOnboarding = false; // ✅ Track onboarding status
 
-  final List<Widget> _pages = [
-   const  SafeArea(child: HomePage()), // HomePage is Stateful below
-   const SmartSpendPage(),
-   const SavingsPage(),
-   const SettingsPage(),
-  ];
+  // ✅ NEW: Dynamically build pages based on onboarding status
+  List<Widget> _buildPages() {
+    return [
+      const SafeArea(child: HomePage()),
+      _hasSeenSmartSpendOnboarding ? const SmartSpendMainPage() : const SmartSpendPage(),
+      const SavingsPage(),
+      const SettingsPage(),
+    ];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndShowSmartSpendOnboarding();
+  }
+
+  /// Check if user has seen Smart Spend onboarding
+  Future<void> _checkAndShowSmartSpendOnboarding() async {
+    if (_hasCheckedOnboarding) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final hasSeenOnboarding = userDoc.data()?['hasSeenSmartSpendOnboarding'] ?? false;
+
+      if (mounted) {
+        setState(() {
+          _hasSeenSmartSpendOnboarding = hasSeenOnboarding;
+        });
+      }
+
+      _hasCheckedOnboarding = true;
+    } catch (e) {
+      debugPrint('Error checking onboarding status: $e');
+    }
+  }
 
   void _onNavTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -272,8 +398,10 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final pages = _buildPages(); // ✅ Build pages dynamically
+    
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedIndex,
         onTap: _onNavTapped,
@@ -281,6 +409,7 @@ class _MainShellState extends State<MainShell> {
     );
   }
 }
+
 
 // ================= AUTO SLIDING CAROUSEL =================
 class AutoSlidingInfoCarousel extends StatefulWidget {
@@ -363,7 +492,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
         color: color,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: color.withAlpha(50), blurRadius: 10, offset: const Offset(0, 5))
+          BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 5)) // ✅ FIXED
         ],
       ),
       child: Stack(
@@ -396,18 +525,20 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: GoogleFonts.inter(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: GoogleFonts.inter(
                           color: Colors.white70,
                           fontSize: 12,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
@@ -433,7 +564,7 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
           height: 6.0,
           width: _currentPage == index ? 16.0 : 6.0,
           decoration: BoxDecoration(
-            color: _currentPage == index ? primaryBlue : const Color(0x64BDBDBD), // grey with alpha ~100
+            color: _currentPage == index ? primaryBlue : const Color(0x64BDBDBD),
             borderRadius: BorderRadius.circular(3),
           ),
         );
@@ -493,184 +624,397 @@ class _HomePageState extends State<HomePage> {
   // Get current user once
   User? get _user => FirebaseAuth.instance.currentUser;
 
-  // --- Firestore Stream for Income (AUTH SAFE) ---
+  // --- Firestore Stream for User Name ---
+  Stream<String> _getUserNameStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return Stream.value('User');
+
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        return data['name']?.toString() ?? 'User';
+      }
+      return 'User';
+    });
+  }
+
+  // --- Firestore Stream for Income (auth + guards) ---
   Stream<double> _getTotalIncomeStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
+
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 1);
 
     return FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('income')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThan: Timestamp.fromDate(end))
         .snapshots()
         .map((snapshot) {
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final amount = doc['amount'];
-        if (amount is int) {
-          total += amount.toDouble();
-        } else if (amount is double) {
-          total += amount;
-        }
+      double total = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+
+        final raw = data?['amount'];
+        final parsed = raw is num
+            ? raw.toDouble()
+            : double.tryParse(raw?.toString() ?? '') ?? 0;
+
+        total += parsed;
       }
       return total;
     });
   }
 
-  // --- Firestore Stream for Expenses (AUTH SAFE) ---
+  // --- Firestore Stream for Expenses (auth + guards) ---
   Stream<double> _getTotalExpensesStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
 
     final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
     return FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('expenses')
-        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
-        .where('timestamp', isLessThanOrEqualTo: endOfMonth)
+        .where('timestamp', isGreaterThanOrEqualTo: start)
+        .where('timestamp', isLessThanOrEqualTo: end)
         .snapshots()
         .map((snapshot) {
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final amount = doc['amount'];
-        if (amount is int) {
-          total += amount.toDouble();
-        } else if (amount is double) {
-          total += amount;
-        }
+      double total = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+
+        final raw = data?['amount'];
+        final parsed = raw is num
+            ? raw.toDouble()
+            : double.tryParse(raw?.toString() ?? '') ?? 0;
+
+        total += parsed;
       }
       return total;
     });
   }
 
- // ...existing code...
-  // --- WIDGET 1: Gradient Income Card (Balance Card) ---
+  // --- WIDGET 1: Gradient Income Card (Balance Card) with Name & Animated Pattern ---
   Widget _incomeCard(BuildContext context) {
-    return StreamBuilder<double>(
-      stream: _getTotalIncomeStream(),
-      builder: (context, snapshot) {
-        final balance = snapshot.data ?? 0.0;
-        final displayBalance = _isBalanceVisible ? balance.toStringAsFixed(2) : '******'; // Hide balance logic
-        final displayIcon = _isBalanceVisible ? LucideIcons.eye : LucideIcons.eyeOff;
+    return StreamBuilder<String>(
+      stream: _getUserNameStream(),
+      builder: (context, nameSnapshot) {
+        final userName = nameSnapshot.data ?? 'User';
 
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 24,
-            bottom: 28,
-          ),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [cardGradientStart, cardGradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(35),
-              bottomRight: Radius.circular(35),
-            ),
-            boxShadow: [
-              BoxShadow(color: cardShadowColor, blurRadius: 10, offset: Offset(0, 5))
-            ],
-          ),
-          // Use Stack so we can position the logout button in the top-right
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  // Title
-                  const Text(
-                    'Total Income',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+        return StreamBuilder<double>(
+          stream: _getTotalIncomeStream(),
+          builder: (context, incomeSnapshot) {
+            final balance = incomeSnapshot.data ?? 0.0;
+            final displayBalance = _isBalanceVisible ? balance.toStringAsFixed(2) : '••••••';
+            final displayIcon = _isBalanceVisible ? LucideIcons.eye : LucideIcons.eyeOff;
 
-                  // Balance Display
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isBalanceVisible ? 'RM ' : '', // Only show RM when visible
-                        style: const TextStyle(color: Colors.white70, fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        displayBalance,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 1.2),
-                      ),
-
-                      // Toggle Button
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isBalanceVisible = !_isBalanceVisible;
-                          });
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: Icon(displayIcon, color: Colors.white70, size: 22),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Loading indicator
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2),
-                    ),
+            return Container(
+              width: double.infinity,
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 16,
+                bottom: 24,
+                left: 20,
+                right: 20,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cardGradientStart, cardGradientEnd],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(35),
+                  bottomRight: Radius.circular(35),
+                ),
+                boxShadow: [
+                  BoxShadow(color: cardShadowColor, blurRadius: 10, offset: Offset(0, 5))
                 ],
               ),
+              child: Stack(
+                children: [
+                  // Animated Pattern Background
+                  const Positioned.fill(
+                    child: AnimatedPatternBackground(),
+                  ),
 
-              // Logout button positioned top-right
-              Positioned(
-                right: 12,
-                top: 6,
-                child: IconButton(
-                  icon: const Icon(LucideIcons.logOut, color: Colors.white, size: 22),
-                  tooltip: 'Logout',
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('ARE YOU SURE YOU WANT TO LOGOUT'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
+                  // Content
+                  Column(
+                    children: [
+                      // Header: Welcome Message + Logout (side by side)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Welcome Message with Glow
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white.withValues(alpha: 0.3), // ✅ FIXED
+                                    blurRadius: 20,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 0),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'Hye! Welcome,\n$userName',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.3,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Logout'),
+
+                          // Logout Button
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(LucideIcons.logOut, color: Colors.white, size: 20),
+                              tooltip: 'Logout',
+                              onPressed: () async {
+                                final confirmed = await showGeneralDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: true,
+                                  barrierLabel: '',
+                                  transitionDuration: const Duration(milliseconds: 280),
+                                  pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                  transitionBuilder: (context, animation, secondary, child) {
+                                    final curved = CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeOutBack,
+                                    );
+
+                                    return Transform.scale(
+                                      scale: curved.value,
+                                      child: Opacity(
+                                        opacity: animation.value,
+                                        child: Dialog(
+                                          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(22),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(22),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Animated Icon
+                                                Transform.scale(
+                                                  scale: 0.85 + curved.value * 0.15,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(16),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red.withValues(alpha: 0.12), // ✅ FIXED
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.logout_rounded,
+                                                      color: Colors.red,
+                                                      size: 46,
+                                                    ),
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 18),
+
+                                                Text(
+                                                  "Logout?",
+                                                  textAlign: TextAlign.center,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 8),
+
+                                                Text(
+                                                  "Are you sure you want to log out from FinTrackU?",
+                                                  textAlign: TextAlign.center,
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.black54,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 24),
+
+                                                Row(
+                                                  children: [
+                                                    // Cancel Button
+                                                    Expanded(
+                                                      child: TextButton(
+                                                        style: TextButton.styleFrom(
+                                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(14),
+                                                            side: const BorderSide(color: Colors.grey),
+                                                          ),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, false),
+                                                        child: Text(
+                                                          "Cancel",
+                                                          style: GoogleFonts.inter(
+                                                            fontWeight: FontWeight.w600,
+                                                            color: Colors.black87,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+
+                                                    const SizedBox(width: 12),
+
+                                                    // Logout Button
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.red,
+                                                          foregroundColor: Colors.white,
+                                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(14),
+                                                          ),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        child: Text(
+                                                          "Logout",
+                                                          style: GoogleFonts.inter(
+                                                            fontWeight: FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+
+                                if (!mounted) return; // ✅ FIXED: Guard with mounted check
+
+                                if (confirmed == true) {
+                                  await FirebaseAuth.instance.signOut();
+                                  if (!mounted) return;
+                                  Navigator.pushReplacementNamed(context, '/login');
+                                }
+                              },
+                            ),
                           ),
                         ],
                       ),
-                    );
 
-                    if (confirmed == true) {
-                      await FirebaseAuth.instance.signOut();
-                      if (!mounted) return;
-                      Navigator.pushReplacementNamed(context, '/login');
-                    }
-                  },
-                ),
+                      const SizedBox(height: 20),
+
+                      // Title
+                      Text(
+                        'Total Income',
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Balance Display with Glow
+                      Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.25), // ✅ FIXED
+                              blurRadius: 30,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 0),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _isBalanceVisible ? 'RM ' : '',
+                              style: GoogleFonts.inter(
+                                color: Colors.white70,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              displayBalance,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 42,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+
+                            // Toggle Button
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isBalanceVisible = !_isBalanceVisible;
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: Icon(displayIcon, color: Colors.white70, size: 20),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Loading indicator
+                      if (incomeSnapshot.connectionState == ConnectionState.waiting)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white70,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
-
 
   // --- WIDGET 2: Quick Actions ---
   Widget _quickActions(BuildContext context) {
@@ -681,7 +1025,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 10, offset: const Offset(0, 5))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 5)) // ✅ FIXED
         ],
       ),
       child: Column(
@@ -692,10 +1036,11 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.only(bottom: 16.0, left: 8.0, top: 4.0),
             child: Text(
               'Quick Actions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black, // Changed to black for simplicity
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                letterSpacing: 0.3,
               ),
             ),
           ),
@@ -723,13 +1068,21 @@ class _HomePageState extends State<HomePage> {
               color: actionIconBackground,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
-                BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 4))
+                BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 4)) // ✅ FIXED
               ],
             ),
-            child: Icon(icon, size: 28, color: iconColor),
+            child: Icon(icon, size: 26, color: iconColor),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, color: primaryBlue, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: primaryBlue,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
         ],
       ),
     );
@@ -756,24 +1109,32 @@ class _HomePageState extends State<HomePage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Colors.grey.shade200),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 4)) // ✅ FIXED
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'This Month\'s Spending',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryBlue),
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: primaryBlue,
+                    letterSpacing: 0.3,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
                 // Spending Amount
                 Text(
                   'RM ${currentSpending.toStringAsFixed(2)}',
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: 28,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     color: spendingRed,
+                    letterSpacing: 0.5,
                   ),
                 ),
                 const SizedBox(height: 15),
@@ -793,11 +1154,19 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       '${(progress * 100).toStringAsFixed(0)}% of budget used',
-                      style: TextStyle(fontSize: 12, color: progressColor, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        color: progressColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       'Goal: RM ${budgetGoal.toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ],
                 ),
@@ -809,7 +1178,12 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       'View all Transactions ',
-                      style: TextStyle(fontSize: 13, color: cardGradientEnd, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: cardGradientEnd,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                     Icon(LucideIcons.arrowRight, size: 16, color: cardGradientEnd),
                   ],
@@ -830,7 +1204,7 @@ class _HomePageState extends State<HomePage> {
         body: Center(
           child: ElevatedButton(
             onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-            child: const Text('Login to view dashboard'),
+            child: Text('Login to view dashboard', style: GoogleFonts.inter()),
           ),
         ),
       );
@@ -852,14 +1226,15 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 24),
 
                     // Additional Tips Section
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.0),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       child: Text(
                         'Additional Tips',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ),
@@ -915,11 +1290,11 @@ class CustomBottomNav extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
       decoration: BoxDecoration(
-        color: const Color(0xEBFFFFFF), // Colors.white.withOpacity(0.92)
+        color: const Color(0xEBFFFFFF),
         borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0x14000000), // Colors.black.withOpacity(0.08)
+            color: const Color(0x14000000),
             blurRadius: 20,
             offset: const Offset(0, -4),
           )
@@ -952,7 +1327,7 @@ class CustomBottomNav extends StatelessWidget {
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: const Color(0x5911355F), // primaryBlue.withOpacity(0.35)
+                    color: const Color(0x5911355F),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   )
@@ -970,10 +1345,11 @@ class CustomBottomNav extends StatelessWidget {
             const SizedBox(height: 4),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 color: active ? Colors.white : Colors.black54,
+                letterSpacing: 0.2,
               ),
               child: Text(label),
             )

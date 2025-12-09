@@ -15,6 +15,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
@@ -40,8 +42,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       final uid = userCred.user!.uid;
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
+        
       });
 
       if (!mounted) return;
@@ -141,6 +145,24 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   key: _formKey,
                   child: Column(
                     children: [
+
+                      /// Name
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: "Name",
+                          filled: true,
+                          fillColor: const Color(0xFFF4F7FF),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.isEmpty ? "Enter your name" : null,
+                      ),
+                      const SizedBox(height: 20),
+
                       /// Email
                       TextFormField(
                         controller: _emailController,

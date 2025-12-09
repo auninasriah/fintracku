@@ -34,35 +34,78 @@ class _ExpensesPageState extends State<ExpensesPage> {
  
   late CollectionReference expensesCol;
 
-
   DateTime displayedMonth = DateTime.now();
-  late String selectedMonth;
+  String selectedMonth = _getMonthName(DateTime.now().month);
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
+    _initializeFirestore();
+  }
 
-  final user = FirebaseAuth.instance.currentUser;
+  // Initialize Firestore reference with proper auth checking
+  void _initializeFirestore() {
+    final user = FirebaseAuth.instance.currentUser;
 
-  expensesCol = FirebaseFirestore.instance
-      .collection('users')
-      .doc(user!.uid)
-      .collection('expenses');
+    debugPrint('🔍 ExpensesPage initState: user = ${user?.uid}');
 
-  selectedMonth = _getMonthName(displayedMonth.month);
-}
+    if (user == null) {
+      debugPrint('⚠️ User not authenticated in ExpensesPage');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You must be signed in to view expenses'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      });
+      return;
+    }
 
+    // Initialize reference to users/{uid}/expenses (matches home_page.dart)
+    expensesCol = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('expenses');
+
+    debugPrint('✅ ExpensesPage Firestore path initialized: users/${user.uid}/expenses');
+  }
+
+  /// Show modern calendar with daily summaries
+  void _showCalendarView() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CalendarBottomSheet(
+        expenses: expensesCol,
+        selectedMonth: selectedMonth,
+        categoryColor: _categoryColor,
+      ),
+    );
+  }
 
   // Helper: Month name long
   static String monthName(DateTime d) => DateFormat('MMMM yyyy').format(d);
 
-  // Short month mapping provided by user
+  // Short month mapping
   static String _getMonthName(int month) {
     const months = [
       "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
       "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
     ];
-    return (month >= 1 && month <= 12) ? months[month - 1] : months[0];
+    return months[month - 1];
+  }
+
+  static int _monthNumber(String name) {
+    const months = [
+      "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+    ];
+    return months.indexOf(name) + 1;
   }
 
   // Helper: Remove time from DateTime
@@ -95,12 +138,12 @@ void initState() {
                 curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
                 decoration: BoxDecoration(
-                  color: isSelected ? _primary : Colors.grey.shade200, // Changed selected color to primary
+                  color: isSelected ? _primary : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: _primary.withOpacity(0.4), // Glow effect
+                            color: _primary.withOpacity(0.4),
                             blurRadius: 12,
                             spreadRadius: 2,
                             offset: const Offset(0, 4),
@@ -120,7 +163,7 @@ void initState() {
               ),
             ),
           );
-        }).toList(), // Fixed toList() call here
+        }).toList(),
       ),
     );
   }
@@ -178,21 +221,21 @@ void initState() {
     switch (category.toLowerCase()) {
       case 'food':
       case 'food & drink':
-        return Colors.blue.shade900; // Requested dark blue
+        return Colors.blue.shade900;
       case 'transport':
-        return Colors.blue.shade400; // Original
+        return Colors.blue.shade400;
       case 'bills':
-        return Colors.orange.shade400; // Original
+        return Colors.orange.shade400;
       case 'shopping':
-        return Colors.yellow.shade700; // Requested vibrant yellow
+        return Colors.yellow.shade700;
       case 'health':
-        return Colors.brown.shade400; // Original
+        return Colors.brown.shade400;
       case 'education':
-        return Colors.indigo.shade400; // Original
+        return Colors.indigo.shade400;
       case 'entertainment':
-        return Colors.pink.shade400; // Original
+        return Colors.pink.shade400;
       default:
-        return Colors.blueGrey.shade400; // Original
+        return Colors.blueGrey.shade400;
     }
   }
 
@@ -200,15 +243,15 @@ void initState() {
     switch (category.toLowerCase()) {
       case 'food':
       case 'food & drink':
-        return Icons.restaurant; // More specific icon
+        return Icons.restaurant;
       case 'transport':
-        return Icons.commute; // More general transport icon
+        return Icons.commute;
       case 'bills':
         return Icons.receipt_long;
       case 'shopping':
         return Icons.shopping_bag;
       case 'health':
-        return Icons.medical_services; // More specific icon
+        return Icons.medical_services;
       case 'education':
         return Icons.school;
       case 'entertainment':
@@ -255,6 +298,13 @@ void initState() {
             fontSize: 18,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month, color: _navy),
+            tooltip: "View by Calendar",
+            onPressed: _showCalendarView,
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: expensesCol.orderBy('date', descending: true).snapshots(),
@@ -263,7 +313,6 @@ void initState() {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Added null check '?' and null-coalescing operator '??'
           final docsAll = snap.data?.docs ?? [];
           final List<QueryDocumentSnapshot> docsThisMonth = [];
           final Map<String, double> categoryTotals = {};
@@ -277,7 +326,7 @@ void initState() {
             DateTime date = ts is Timestamp ? ts.toDate() : DateTime.tryParse(ts.toString()) ?? DateTime.now();
 
             if (date.year == displayedMonth.year && date.month == displayedMonth.month) {
-              docsThisMonth.add(doc); // Add to month-specific list
+              docsThisMonth.add(doc);
               final amount = (data['amount'] is num ? data['amount'].toDouble() : 0.0);
               final category = (data['category'] ?? 'Others').toString();
               categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
@@ -302,7 +351,6 @@ void initState() {
             if (b == "Today") return 1;
             if (a == "Yesterday") return -1;
             if (b == "Yesterday") return 1;
-            // For other dates, parse and sort descending
             DateTime? dateA = DateFormat('dd MMM yyyy').tryParse(a);
             DateTime? dateB = DateFormat('dd MMM yyyy').tryParse(b);
             if (dateA == null && dateB == null) return 0;
@@ -311,22 +359,20 @@ void initState() {
             return dateB.compareTo(dateA);
           });
 
-
           // Generate PieChartSectionData for donut
           final pieSections = categoryTotals.entries.mapIndexed((i, e) {
             return PieChartSectionData(
               value: e.value,
               color: _categoryColor(e.key),
-              radius: 50, // Adjusted radius to 50 (smaller chart) based on request
+              radius: 50,
               showTitle: false,
             );
-          }).toList(); // Fixed toList() call here
+          }).toList();
 
           // If no records this month, show empty state
           if (docsThisMonth.isEmpty) {
             return Column(
               children: [
-                // Info Cards
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
                   child: Row(
@@ -349,7 +395,6 @@ void initState() {
                     ],
                   ),
                 ),
-                // Month selector
                 _buildMonthSelector(),
                 Expanded(
                   child: Center(
@@ -470,7 +515,7 @@ void initState() {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16), // Spacing after chart, before legend below
+                            const SizedBox(height: 16),
                             // Dynamic Legend below the chart
                             ...categoryTotals.entries.map((e) =>
                                 Padding(
@@ -518,7 +563,6 @@ void initState() {
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 18, color: _primary)),
                             const SizedBox(height: 12),
-                            
                             const SizedBox(height: 8),
                              _buildInsightItem(
                               icon: Icons.info_outline,
@@ -529,7 +573,6 @@ void initState() {
                         ),
                       ),
                       const SizedBox(height: 24),
-
 
                       // --- Recent Expenses List (Grouped by Date) ---
                       const Text("Recent Expenses",
@@ -562,7 +605,7 @@ void initState() {
                             final categoryColor = _categoryColor(category.toString());
 
                             return Dismissible(
-                              key: Key(doc.id), // Unique key for Dismissible
+                              key: Key(doc.id),
                               direction: DismissDirection.horizontal,
                               background: Container(
                                 color: const Color.fromARGB(255, 82, 15, 10),
@@ -577,7 +620,7 @@ void initState() {
                                 child: const Icon(Icons.edit, color: Colors.white),
                               ),
                               confirmDismiss: (direction) async {
-                                if (direction == DismissDirection.startToEnd) { // Swiping left to right (Delete)
+                                if (direction == DismissDirection.startToEnd) {
                                   return await showDialog(
                                     context: context,
                                     builder: (BuildContext context) {
@@ -597,7 +640,7 @@ void initState() {
                                       );
                                     },
                                   );
-                                } else if (direction == DismissDirection.endToStart) { // Swiping right to left (Edit)
+                                } else if (direction == DismissDirection.endToStart) {
                                   if (!mounted) return false;
                                   Navigator.push(
                                     context,
@@ -605,19 +648,18 @@ void initState() {
                                       builder: (_) => AddExpensePage(existingId: doc.id, existingData: d),
                                     ),
                                   );
-                                  return false; // Don't dismiss, just navigate
+                                  return false;
                                 }
                                 return false;
                               },
                               onDismissed: (direction) async {
-                                if (direction == DismissDirection.startToEnd) { // Delete confirmed
+                                if (direction == DismissDirection.startToEnd) {
                                   await expensesCol.doc(doc.id).delete();
                                   if (!mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text('Expense deleted successfully')),
                                   );
                                 }
-                                // No action needed for edit here as it navigates
                               },
                               child: Card(
                                 color: _cardBg,
@@ -637,7 +679,7 @@ void initState() {
                                   ),
                                   title: Text(category.toString(),
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  subtitle: Text(note, // Removed date from subtitle as it's in header
+                                  subtitle: Text(note,
                                       style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                                   trailing: Text(
                                     "- RM ${amount.toStringAsFixed(2)}",
@@ -650,7 +692,7 @@ void initState() {
                           }).toList(),
                         ];
                       }).toList(),
-                      const SizedBox(height: 80), // Padding for FAB
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
@@ -689,5 +731,274 @@ void initState() {
       ),
     );
   }
+}
 
+/// Modern Calendar Bottom Sheet Widget for Expenses
+class _CalendarBottomSheet extends StatefulWidget {
+  final CollectionReference expenses;
+  final String selectedMonth;
+  final Color Function(String) categoryColor;
+
+  const _CalendarBottomSheet({
+    required this.expenses,
+    required this.selectedMonth,
+    required this.categoryColor,
+  });
+
+  @override
+  State<_CalendarBottomSheet> createState() => _CalendarBottomSheetState();
+}
+
+class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
+  late DateTime displayMonth;
+  Map<DateTime, double> dailyTotals = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final monthNum = _monthNumber(widget.selectedMonth);
+    displayMonth = DateTime(DateTime.now().year, monthNum, 1);
+    _fetchDailyTotals();
+  }
+
+  int _monthNumber(String name) {
+    const months = [
+      "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+    ];
+    return months.indexOf(name) + 1;
+  }
+
+  Future<void> _fetchDailyTotals() async {
+    final start = DateTime(displayMonth.year, displayMonth.month, 1);
+    final end = DateTime(displayMonth.year, displayMonth.month + 1, 0, 23, 59, 59);
+
+    final snapshot = await widget.expenses
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .get();
+
+    final Map<DateTime, double> totals = {};
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final date = (data['date'] as Timestamp).toDate();
+      final amount = (data['amount'] as num).toDouble();
+      final dayKey = DateTime(date.year, date.month, date.day);
+      totals[dayKey] = (totals[dayKey] ?? 0) + amount;
+    }
+
+    setState(() => dailyTotals = totals);
+  }
+
+  void _previousMonth() {
+    setState(() {
+      displayMonth = DateTime(displayMonth.year, displayMonth.month - 1);
+      _fetchDailyTotals();
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      displayMonth = DateTime(displayMonth.year, displayMonth.month + 1);
+      _fetchDailyTotals();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_primary, Color(0xFF234A78)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Daily Expenses Calendar",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Month Navigation
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left, color: _primary),
+                        onPressed: _previousMonth,
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy').format(displayMonth),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right, color: _primary),
+                        onPressed: _nextMonth,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Calendar Grid
+                  _buildCalendarGrid(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final firstDay = DateTime(displayMonth.year, displayMonth.month, 1);
+    final lastDay = DateTime(displayMonth.year, displayMonth.month + 1, 0);
+    final daysInMonth = lastDay.day;
+    final firstWeekday = firstDay.weekday;
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return Column(
+      children: [
+        // Day labels
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: dayLabels
+              .map((day) => SizedBox(
+                    width: MediaQuery.of(context).size.width / 8,
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: _primary,
+                        ),
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+
+        // Calendar days
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+          ),
+          itemCount: daysInMonth + firstWeekday - 1,
+          itemBuilder: (context, index) {
+            if (index < firstWeekday - 1) {
+              return const SizedBox();
+            }
+
+            final day = index - (firstWeekday - 1) + 1;
+            final date = DateTime(displayMonth.year, displayMonth.month, day);
+            final hasExpense = dailyTotals.containsKey(date);
+            final amount = dailyTotals[date] ?? 0;
+
+            return GestureDetector(
+              onTap: hasExpense
+                  ? () {
+                      Navigator.pop(context);
+                    }
+                  : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: hasExpense
+                      ? const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: hasExpense ? null : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: hasExpense
+                      ? Border.all(color: const Color(0xFFFF6B6B), width: 2)
+                      : null,
+                  boxShadow: hasExpense
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFFFF6B6B)
+                                .withAlpha((0.25 * 255).round()),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$day',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: hasExpense ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    if (hasExpense)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          "RM ${amount.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 }

@@ -30,12 +30,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_auth: ^4.0.0
+  firebase_auth: ^5.0.1
   lucide_icons: ^0.257.0
-  firebase_core: ^2.24.0
+  firebase_core: ^3.6.0
   stream_transform: ^2.1.0
   shared_preferences: ^2.0.0
-  cloud_firestore: ^4.0.0
+  cloud_firestore: ^5.0.1
   fl_chart: ^0.68.0
   intl: ^0.19.0  
   smooth_page_indicator: ^1.2.0

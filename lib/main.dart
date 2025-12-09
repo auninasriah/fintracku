@@ -1,6 +1,7 @@
 // main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart' as fb_opt;
 
 import 'splash_page.dart';
@@ -26,6 +27,8 @@ Future<void> main() async {
     debugPrint("❌ Firebase initialization failed: $e");
   }
 
+  await Future.delayed(const Duration(milliseconds: 500));
+
   runApp(const FinTrackUApp());
 }
 
@@ -45,11 +48,20 @@ class FinTrackUApp extends StatelessWidget {
           primary: primaryBlue,
           secondary: accentBlue,
         ),
-        fontFamily: 'Roboto',
-        appBarTheme: const AppBarTheme(
+        // Use system font (San Francisco on iOS, Roboto on Android) via Google Fonts
+        textTheme: GoogleFonts.interTextTheme(
+          Theme.of(context).textTheme,
+        ),
+        appBarTheme: AppBarTheme(
           backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
+          titleTextStyle: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
 
@@ -64,7 +76,7 @@ class FinTrackUApp extends StatelessWidget {
       // LOGIN (dengan args)
       '/login': (context) => const LoginPage(),
       '/create-account': (context) => const CreateAccountPage(),
-      '/home': (context) => const HomePage(),
+      '/home': (context) => const MainShell(),
     },
 
 

@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'home_page.dart';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const Color darkStart = Color(0xFF005CFF);
 const Color darkEnd = Color(0xFF00FFC0);
@@ -97,18 +100,56 @@ class _LoginPageState extends State<LoginPage>
     final String email = _emailController.text.trim();
     final String password = _passwordController.text.trim();
 
+    debugPrint('Attempting signIn for: $email');
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final userCred = await _auth
+          .signInWithEmailAndPassword(email: email, password: password)
+          .timeout(const Duration(seconds: 15), onTimeout: () {
+            throw TimeoutException('Firebase sign-in timed out');
+          });
+
+      debugPrint('✅ Sign-in succeeded: uid=${userCred.user?.uid}');
+
+      final uid = userCred.user!.uid;
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (!userDoc.exists) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'email': email,
+          'name': 'Unnamed User',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        debugPrint("User Firestore doc was missing — created automatically.");
+      }
 
       await _saveEmailPreference(email, _rememberMe);
 
-      if (!mounted) return;
+      final current = FirebaseAuth.instance.currentUser;
+      debugPrint('FirebaseAuth.currentUser = ${current?.uid}');
 
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const MainShell(), // Use MainShell directly, not HomePage
+        ),
+      );
+
+    } on TimeoutException catch (e) {
+      // catch timeout first
+      debugPrint('⏱️ TIMEOUT: $e');
+      _showError('Sign-in timed out. Check your network.');
     } on FirebaseAuthException catch (e) {
-      _showError(e.message ?? "Login failed.");
-    } catch (e) {
-      _showError("An unexpected error occurred.");
+      // then catch Firebase-specific errors
+      debugPrint('🔐 FirebaseAuthException: code=${e.code}, msg=${e.message}');
+      _showError(e.message ?? 'Login failed');
+    } catch (e, st) {
+      // finally catch all other errors
+      debugPrint('❌ Unexpected error: $e');
+      debugPrintStack(stackTrace: st);
+      _showError('An error occurred: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -121,9 +162,7 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  // -----------------------------------------
-  // TEXT FIELD DESIGN (unchanged logic)
-  // -----------------------------------------
+  
   Widget _buildRoundedField({
     required TextEditingController controller,
     required String hint,
@@ -139,7 +178,8 @@ class _LoginPageState extends State<LoginPage>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            // replaced withOpacity with withAlpha
+            color: Colors.black.withAlpha((0.06 * 255).round()),
             blurRadius: 6,
             offset: const Offset(0, 4),
           )
@@ -164,7 +204,7 @@ class _LoginPageState extends State<LoginPage>
   // -----------------------------------------
   // BUILD UI
   // -----------------------------------------
-  @override
+   @override
   Widget build(BuildContext context) {
     final double height = MediaQuery.of(context).size.height;
 
@@ -172,9 +212,6 @@ class _LoginPageState extends State<LoginPage>
       backgroundColor: const Color(0xFFF6F8FF),
       body: Column(
         children: [
-          // ---------------------------
-          // TOP IMAGE WITH CURVE
-          // ---------------------------
           ClipPath(
             clipper: _CurvedClipper(),
             child: Container(
@@ -190,7 +227,8 @@ class _LoginPageState extends State<LoginPage>
               child: Image.asset(
                 "assets/images/login.jpg",
                 fit: BoxFit.cover,
-                color: Colors.black.withOpacity(0.25),
+                // replaced withOpacity with withAlpha
+                color: Colors.black.withAlpha((0.25 * 255).round()),
                 colorBlendMode: BlendMode.darken,
               ),
             ),
