@@ -6,12 +6,12 @@ import 'home_page.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-const Color darkStart = Color(0xFF005CFF);
-const Color darkEnd = Color(0xFF00FFC0);
+const Color darkStart = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color darkEnd = Color(0xFF3F2A61); // Vibrant Purple
 const Color accentPrimary = Colors.white;
-const Color actionGradientStart = Color(0xFF00E0FF);
-const Color actionGradientEnd = Color(0xFF6A00FF);
-const Color cardBorder = Color(0xFF00BFFF);
+const Color actionGradientStart = Color(0xFF3C79C1);
+const Color actionGradientEnd = Color(0xFF2A466F);
+const Color cardBorder = Color(0xFF3C79C1);
 const Color errorRed = Color(0xFFB00020);
 
 class LoginPage extends StatefulWidget {
@@ -227,7 +227,7 @@ class _LoginPageState extends State<LoginPage>
               child: Image.asset(
                 "assets/images/login.jpg",
                 fit: BoxFit.cover,
-                // replaced withOpacity with withAlpha
+                
                 color: Colors.black.withAlpha((0.25 * 255).round()),
                 colorBlendMode: BlendMode.darken,
               ),

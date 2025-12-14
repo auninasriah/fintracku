@@ -14,24 +14,32 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin{
 
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
+  late final AnimationController _spinController;
 
-  static const Color brightCyan = Color(0xFF00CFFF);
+  static const Color cardGradientStart = Color(0xFF3C79C1);
+  static const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187);
 
   @override
   void initState() {
     super.initState();
 
-    // Animation setup
+    // Fade animation setup
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    // Spin animation setup for loader
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
 
     _startSplashSequence();
   }
@@ -61,14 +69,22 @@ class _SplashPageState extends State<SplashPage>
   @override
   void dispose() {
     _controller.dispose();
+    _spinController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: brightCyan,
-      body: Center(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cardGradientStart, cardGradientEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
@@ -76,13 +92,46 @@ class _SplashPageState extends State<SplashPage>
             children: [
               // Logo
               Image.asset(
-                'assets/images/logo.png',
+                'assets/images/fintracku.png',
                 width: 200,
                 height: 200,
                 fit: BoxFit.contain,
               ),
 
-              const SizedBox(height: 130),
+              const SizedBox(height: 50),
+
+              // Loading spinner animation
+              RotationTransition(
+                turns: _spinController,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 4,
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white,
+                          width: 4,
+                        ),
+                        right: BorderSide(
+                          color: Colors.white.withOpacity(0.5),
+                          width: 4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 50),
 
               // Gradient text title
               ShaderMask(
@@ -96,10 +145,18 @@ class _SplashPageState extends State<SplashPage>
                     ],
                   ).createShader(bounds);
                 },
-            
+                child: const Text(
+                  'Loading...',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
+        ),
         ),
       ),
     );

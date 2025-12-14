@@ -11,7 +11,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 // Colors
-const Color primaryBlue = Color(0xFF11355F);
+const Color primaryBlue = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+const Color cardGradientStart = Color(0xFF3C79C1);
 const Color incomeGreen = Color(0xFF4CAF50);
 const Color _softBg = Color(0xFFF7F9FC);
 const Color _cardBg = Colors.white;
@@ -230,12 +232,21 @@ class _IncomePageState extends State<IncomePage> {
     if (!_isAuthReady) {
       return Scaffold(
         appBar: AppBar(
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [cardGradientStart, cardGradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           title: const Text("Income Tracker",
               style: TextStyle(
-                  color: primaryBlue)),
-          backgroundColor: Colors.white,
+                  color: Colors.white)),
+          backgroundColor: Colors.transparent,
           elevation: 0,
-          iconTheme: const IconThemeData(color: primaryBlue),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -256,15 +267,24 @@ class _IncomePageState extends State<IncomePage> {
     return Scaffold(
       backgroundColor: _softBg,
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+               colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: const Text("Income Tracker",
             style:
-                TextStyle(color: primaryBlue, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+                TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: primaryBlue),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month, color: primaryBlue),
+            icon: const Icon(Icons.calendar_month, color: Colors.white),
             tooltip: "View by Calendar",
             onPressed: _showCalendarView,
           ),
@@ -288,7 +308,7 @@ class _IncomePageState extends State<IncomePage> {
               if (docs.isEmpty) return const SizedBox();
 
               return IconButton(
-                icon: const Icon(Icons.picture_as_pdf),
+                icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
                 onPressed: () => _generatePdf(docs, total, cat),
               );
             },
@@ -831,7 +851,7 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue, Color(0xFF345A8B)],
+                colors: [primaryBlue, Color(0xFF2A466F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -940,7 +960,7 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
             crossAxisSpacing: 8,
           ),
           itemCount: daysInMonth + firstWeekday - 1,
-          itemBuilder: (context, index) {
+                    itemBuilder: (context, index) {
             if (index < firstWeekday - 1) {
               return const SizedBox();
             }
@@ -983,34 +1003,39 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       '$day',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: hasIncome ? Colors.white : Colors.black87,
                       ),
                     ),
-                    if (hasIncome)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          "RM ${amount.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                              if (hasIncome)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Flexible(
+                                    child: Text(
+                                      "RM${amount.toStringAsFixed(0)}",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
+                      );
+                    },
+                  )
+                ],
+              );
+            }
+          }

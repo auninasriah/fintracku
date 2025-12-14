@@ -458,6 +458,15 @@ class _AddExpensePageState extends State<AddExpensePage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF3C79C1), Color(0xFF2A466F)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(

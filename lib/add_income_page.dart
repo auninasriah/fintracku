@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'savings_page.dart';
+import 'income_page.dart';
 
 class AddIncomePage extends StatefulWidget {
   final String? incomeId;
@@ -181,20 +184,37 @@ class _AddIncomePageState extends State<AddIncomePage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEditing
-                ? "✅ Income updated successfully!"
-                : "✅ Income added successfully!"),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        if (isEditing) {
+          // For editing, just show a snackbar and pop
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Income updated successfully!"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
 
-        // Small delay to let Firestore sync before popping
-        await Future.delayed(const Duration(milliseconds: 500));
+          // Small delay to let Firestore sync before popping
+          await Future.delayed(const Duration(milliseconds: 500));
 
-        if (mounted) Navigator.pop(context);
+          if (mounted) Navigator.pop(context);
+        } else {
+          // For new income, show confirmation popup
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Income added successfully!"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Small delay to let Firestore sync
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            _showIncomeConfirmation();
+          }
+        }
       }
     } on FirebaseException catch (e) {
       debugPrint('🔥 Firebase error: ${e.code} - ${e.message}');
@@ -223,6 +243,150 @@ class _AddIncomePageState extends State<AddIncomePage> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Show confirmation popup for new income
+  Future<void> _showIncomeConfirmation() async {
+    final shouldNavigateToSavings = await showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (context, animation, secondary, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
+
+        return Transform.scale(
+          scale: curved.value,
+          child: Opacity(
+            opacity: animation.value,
+            child: Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Animated Icon
+                    Transform.scale(
+                      scale: 0.85 + curved.value * 0.15,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF58C5FF).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.savings_rounded,
+                          color: Color(0xFF58C5FF),
+                          size: 46,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Text(
+                      "Save to Savings?",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      "Would you like to save this income to your savings account?",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: Colors.black54,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        // Skip Button
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                side: const BorderSide(color: Colors.grey),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text(
+                              "Skip",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        // Save to Savings Button
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF58C5FF),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: Text(
+                              "Yes",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ) ?? false;
+
+    // Handle navigation based on user choice
+    if (!mounted) return;
+
+    if (shouldNavigateToSavings) {
+      // Navigate to savings page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SavingsPage()),
+      );
+    } else {
+      // Navigate back to income page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const IncomePage()),
+      );
     }
   }
 
@@ -389,7 +553,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF11355F);
-    const Color accentBlue = Color(0xFF345A8B);
+    const Color accentBlue = Color(0xFF2A466F);
     const Color neonBlue = Color(0xFF58C5FF);
     const Color violet = Color(0xFF7C5CFF);
     const Color coral = Color(0xFFFF7A59);
@@ -398,6 +562,15 @@ class _AddIncomePageState extends State<AddIncomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFD),
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF3C79C1), Color(0xFF2A466F)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           isEditing ? "Edit Income ✏️" : "New Income 💸",
           style: const TextStyle(
@@ -406,7 +579,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
             fontSize: 20,
           ),
         ),
-        backgroundColor: primaryBlue,
+        backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         toolbarHeight: 0,

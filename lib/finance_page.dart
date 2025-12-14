@@ -7,10 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 // --- COLOR DEFINITIONS (matching your app theme) ---
-const Color primaryBlue = Color(0xFF11355F);
-const Color accentBlue = Color(0xFF234A78);
-const Color cardGradientStart = Color(0xFF3B8D99);
-const Color cardGradientEnd = Color(0xFF4F67B5);
+const Color primaryBlue = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color accentBlue = Color(0xFF2A466F); // Deep Blue
+const Color cardGradientStart = Color(0xFF3C79C1);
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
 const Color spendingRed = Color(0xFFC62828);
 const Color incomeGreen = Color(0xFF4CAF50);
 const Color softBg = Color(0xFFF7F9FC);
@@ -28,6 +28,8 @@ class _FinancePageState extends State<FinancePage> {
   User? currentUser;
 
   DateTime selectedMonth = DateTime.now();
+  int selectedYear = DateTime.now().year;
+  bool _showYearView = false; // Toggle between month and year view
 
   @override
   void initState() {
@@ -94,9 +96,63 @@ class _FinancePageState extends State<FinancePage> {
     return dailyData;
   }
 
+  // Get yearly data (by month)
+  Future<Map<String, double>> _getYearlyIncomeData() async {
+    Map<String, double> monthlyData = {};
+
+    final start = DateTime(selectedYear, 1, 1);
+    final end = DateTime(selectedYear + 1, 1, 1);
+
+    final snapshot = await incomeCollection
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThan: Timestamp.fromDate(end))
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final date = (data['date'] as Timestamp).toDate();
+      final amount = (data['amount'] as num).toDouble();
+
+      final monthKey = DateFormat('MM').format(date);
+      monthlyData[monthKey] = (monthlyData[monthKey] ?? 0) + amount;
+    }
+
+    return monthlyData;
+  }
+
+  Future<Map<String, double>> _getYearlyExpensesData() async {
+    Map<String, double> monthlyData = {};
+
+    final start = DateTime(selectedYear, 1, 1);
+    final end = DateTime(selectedYear + 1, 1, 1);
+
+    final snapshot = await expensesCollection
+        .where('timestamp', isGreaterThanOrEqualTo: start)
+        .where('timestamp', isLessThan: end)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final date = data['timestamp'] as DateTime;
+      final amount = (data['amount'] as num).toDouble();
+
+      final monthKey = DateFormat('MM').format(date);
+      monthlyData[monthKey] = (monthlyData[monthKey] ?? 0) + amount;
+    }
+
+    return monthlyData;
+  }
+
   Future<double> _getTotalIncome() async {
-    final start = DateTime(selectedMonth.year, selectedMonth.month, 1);
-    final end = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+    DateTime start, end;
+
+    if (_showYearView) {
+      start = DateTime(selectedYear, 1, 1);
+      end = DateTime(selectedYear + 1, 1, 1);
+    } else {
+      start = DateTime(selectedMonth.year, selectedMonth.month, 1);
+      end = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+    }
 
     final snapshot = await incomeCollection
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
@@ -114,8 +170,15 @@ class _FinancePageState extends State<FinancePage> {
   }
 
   Future<double> _getTotalExpenses() async {
-    final start = DateTime(selectedMonth.year, selectedMonth.month, 1);
-    final end = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+    DateTime start, end;
+
+    if (_showYearView) {
+      start = DateTime(selectedYear, 1, 1);
+      end = DateTime(selectedYear + 1, 1, 1);
+    } else {
+      start = DateTime(selectedMonth.year, selectedMonth.month, 1);
+      end = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+    }
 
     final snapshot = await expensesCollection
         .where('timestamp', isGreaterThanOrEqualTo: start)
@@ -149,21 +212,35 @@ class _FinancePageState extends State<FinancePage> {
     return Scaffold(
       backgroundColor: softBg,
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           'Finance Summary',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
         ),
-        backgroundColor: primaryBlue,
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Month Selector
-            _buildMonthSelector(),
+            // View Toggle (Month/Year)
+            _buildViewToggle(),
+
+            const SizedBox(height: 16),
+
+            // Month or Year Selector
+            _showYearView ? _buildYearSelector() : _buildMonthSelector(),
 
             const SizedBox(height: 24),
 
@@ -209,24 +286,121 @@ class _FinancePageState extends State<FinancePage> {
             const SizedBox(height: 28),
 
             // Income Chart Section
-            _buildChartSection(
-              title: 'Income by Day',
-              futureData: _getMonthlyIncomeData(),
-              color: incomeGreen,
-            ),
+            _showYearView
+                ? _buildChartSection(
+                    title: 'Income by Month',
+                    futureData: _getYearlyIncomeData(),
+                    color: incomeGreen,
+                    isYearlyView: true,
+                  )
+                : _buildChartSection(
+                    title: 'Income by Day',
+                    futureData: _getMonthlyIncomeData(),
+                    color: incomeGreen,
+                    isYearlyView: false,
+                  ),
 
             const SizedBox(height: 28),
 
             // Expenses Chart Section
-            _buildChartSection(
-              title: 'Expenses by Day',
-              futureData: _getMonthlyExpensesData(),
-              color: spendingRed,
-            ),
+            _showYearView
+                ? _buildChartSection(
+                    title: 'Expenses by Month',
+                    futureData: _getYearlyExpensesData(),
+                    color: spendingRed,
+                    isYearlyView: true,
+                  )
+                : _buildChartSection(
+                    title: 'Expenses by Day',
+                    futureData: _getMonthlyExpensesData(),
+                    color: spendingRed,
+                    isYearlyView: false,
+                  ),
 
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  // --------------------------
+  //   VIEW TOGGLE (MONTH/YEAR)
+  // --------------------------
+  Widget _buildViewToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Month View Button
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showYearView = false;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: !_showYearView ? primaryBlue : Colors.transparent,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Monthly',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: !_showYearView ? Colors.white : primaryBlue,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Year View Button
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showYearView = true;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _showYearView ? primaryBlue : Colors.transparent,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Yearly',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _showYearView ? Colors.white : primaryBlue,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -242,7 +416,7 @@ class _FinancePageState extends State<FinancePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06), // ✅ FIXED
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -291,6 +465,145 @@ class _FinancePageState extends State<FinancePage> {
   }
 
   // --------------------------
+  //   YEAR SELECTOR
+  // --------------------------
+  Widget _buildYearSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Previous Year Button
+          IconButton(
+            onPressed: () {
+              setState(() {
+                selectedYear -= 1;
+              });
+            },
+            icon: const Icon(Icons.chevron_left, color: primaryBlue),
+            tooltip: 'Previous Year',
+          ),
+
+          // Year Display
+          GestureDetector(
+            onTap: () {
+              // Open year picker dialog
+              _showYearPickerDialog();
+            },
+            child: Text(
+              selectedYear.toString(),
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: primaryBlue,
+              ),
+            ),
+          ),
+
+          // Next Year Button
+          IconButton(
+            onPressed: () {
+              if (selectedYear < DateTime.now().year) {
+                setState(() {
+                  selectedYear += 1;
+                });
+              }
+            },
+            icon: const Icon(Icons.chevron_right, color: primaryBlue),
+            tooltip: 'Next Year',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------
+  //   YEAR PICKER DIALOG
+  // --------------------------
+  void _showYearPickerDialog() {
+    final currentYear = DateTime.now().year;
+    final years = List.generate(10, (index) => currentYear - 5 + index);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Select Year',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 300,
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: years.length,
+                    itemBuilder: (context, index) {
+                      final year = years[index];
+                      final isSelected = year == selectedYear;
+
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedYear = year;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? primaryBlue : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              year.toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // --------------------------
   //   SUMMARY CARDS
   // --------------------------
   Widget _buildSummaryCard({
@@ -304,10 +617,10 @@ class _FinancePageState extends State<FinancePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 2), // ✅ FIXED
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 2),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1), // ✅ FIXED
+            color: color.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -319,7 +632,7 @@ class _FinancePageState extends State<FinancePage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15), // ✅ FIXED
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 28),
@@ -363,6 +676,7 @@ class _FinancePageState extends State<FinancePage> {
     required String title,
     required Future<Map<String, double>> futureData,
     required Color color,
+    required bool isYearlyView,
   }) {
     return FutureBuilder<Map<String, double>>(
       future: futureData,
@@ -392,7 +706,7 @@ class _FinancePageState extends State<FinancePage> {
                 Icon(Icons.bar_chart_outlined, size: 60, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
                 Text(
-                  'No data for this month',
+                  'No data for this ${isYearlyView ? 'year' : 'month'}',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.black54,
@@ -404,7 +718,9 @@ class _FinancePageState extends State<FinancePage> {
         }
 
         // Convert data to chart format
-        final chartData = _convertToChartData(data);
+        final chartData = isYearlyView
+            ? _convertToYearlyChartData(data)
+            : _convertToMonthlyChartData(data);
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -413,7 +729,7 @@ class _FinancePageState extends State<FinancePage> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06), // ✅ FIXED
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -436,7 +752,6 @@ class _FinancePageState extends State<FinancePage> {
                 child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceAround,
-                    // ✅ FIXED: Removed duplicate 'barGroups' parameter
                     borderData: FlBorderData(show: false),
                     gridData: FlGridData(
                       show: true,
@@ -444,7 +759,7 @@ class _FinancePageState extends State<FinancePage> {
                       horizontalInterval: _getInterval(chartData),
                       getDrawingHorizontalLine: (value) {
                         return FlLine(
-                          color: Colors.grey.withValues(alpha: 0.2), // ✅ FIXED
+                          color: Colors.grey.withValues(alpha: 0.2),
                           strokeWidth: 1,
                         );
                       },
@@ -455,16 +770,33 @@ class _FinancePageState extends State<FinancePage> {
                         sideTitles: SideTitles(
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
-                            final day = (value.toInt() + 1).toString().padLeft(2, '0');
-                            return Text(
-                              day,
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.black54,
-                              ),
-                            );
+                            if (isYearlyView) {
+                              final monthNames = [
+                                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                              ];
+                              final index = value.toInt();
+                              return index < 12
+                                  ? Text(
+                                      monthNames[index],
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: Colors.black54,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink();
+                            } else {
+                              final day = (value.toInt() + 1).toString().padLeft(2, '0');
+                              return Text(
+                                day,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
+                              );
+                            }
                           },
-                          interval: _getChartInterval(data.length),
+                          interval: isYearlyView ? 1 : _getChartInterval(data.length),
                         ),
                       ),
                       leftTitles: AxisTitles(
@@ -486,7 +818,7 @@ class _FinancePageState extends State<FinancePage> {
                       rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
                     maxY: _getMaxY(chartData),
-                    barGroups: chartData, // ✅ FIXED: Now only one 'barGroups' parameter
+                    barGroups: chartData,
                   ),
                 ),
               ),
@@ -523,7 +855,7 @@ class _FinancePageState extends State<FinancePage> {
   //   HELPER METHODS
   // --------------------------
 
-  List<BarChartGroupData> _convertToChartData(Map<String, double> data) {
+  List<BarChartGroupData> _convertToMonthlyChartData(Map<String, double> data) {
     final days = DateTime(selectedMonth.year, selectedMonth.month + 1, 0).day;
 
     List<BarChartGroupData> barGroups = [];
@@ -550,14 +882,39 @@ class _FinancePageState extends State<FinancePage> {
     return barGroups;
   }
 
+  List<BarChartGroupData> _convertToYearlyChartData(Map<String, double> data) {
+    List<BarChartGroupData> barGroups = [];
+
+    for (int i = 1; i <= 12; i++) {
+      final monthKey = i.toString().padLeft(2, '0');
+      final value = data[monthKey] ?? 0.0;
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i - 1,
+          barRods: [
+            BarChartRodData(
+              toY: value,
+              color: _getBarColor(value, data),
+              width: 8,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return barGroups;
+  }
+
   Color _getBarColor(double value, Map<String, double> data) {
     final maxValue = data.values.isEmpty ? 1 : data.values.reduce((a, b) => a > b ? a : b);
     final percentage = value / maxValue;
 
     if (data.values.toList()[0] == spendingRed.value) {
-      return spendingRed.withValues(alpha: 0.5 + (percentage * 0.5)); // ✅ FIXED
+      return spendingRed.withValues(alpha: 0.5 + (percentage * 0.5));
     } else {
-      return incomeGreen.withValues(alpha: 0.5 + (percentage * 0.5)); // ✅ FIXED
+      return incomeGreen.withValues(alpha: 0.5 + (percentage * 0.5));
     }
   }
 

@@ -1,6 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'add_savings_page.dart';
+import 'savings_detail_page.dart';
+
+// --- Color Definitions ---
+const Color primaryBlue = Color(0xFF11355F);
+const Color accentBlue = Color(0xFF234A78);
+const Color softGray = Color(0xFFF7F9FC);
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+const Color cardGradientStart = Color(0xFF3C79C1);
+const Color accentGreen = Color.fromARGB(255, 34, 139, 34);
+const Color softBg = Color(0xFFF7F9FC);
+const Color cardBg = Colors.white;
+const Color navy = Color(0xFF0D1B2A);
 
 class SavingsPage extends StatefulWidget {
   const SavingsPage({super.key});
@@ -10,351 +25,619 @@ class SavingsPage extends StatefulWidget {
 }
 
 class _SavingsPageState extends State<SavingsPage> {
-  // Dummy data - replace with Firebase later
-  double currentSaved = 450;
-  double savingGoal = 2000;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final List<Map<String, dynamic>> history = [
-    {
-      "amount": 120,
-      "category": "Emergency",
-      "date": DateTime(2024, 11, 10),
-      "note": "For rainy days"
-    },
-    {
-      "amount": 80,
-      "category": "Travel",
-      "date": DateTime(2024, 11, 20),
-      "note": "Bali trip"
-    },
-    {
-      "amount": 250,
-      "category": "Wedding",
-      "date": DateTime(2024, 12, 1),
-      "note": "Future planning"
-    },
-  ];
-
-  // Controllers
-  final amountController = TextEditingController();
-  final noteController = TextEditingController();
-
-  String selectedCategory = "Emergency";
-  DateTime selectedDate = DateTime.now();
-
-  final List<String> categories = [
-    "Emergency",
-    "Travel",
-    "House",
-    "Wedding",
-    "Car",
-    "Education"
-  ];
+  late CollectionReference<Map<String, dynamic>> _savingsGoalsRef;
+  bool _initialized = false;
 
   @override
-  Widget build(BuildContext context) {
-    double progress = currentSaved / savingGoal;
+  void initState() {
+    super.initState();
+    _initRefs();
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text("Savings"),
-        backgroundColor: const Color(0xFF11355F),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --------------------------
-            //      SAVINGS OVERVIEW
-            // --------------------------
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: const Color(0xFF11355F),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 120,
-                    width: 120,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 10,
-                          backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation(Colors.white),
-                        ),
-                        Center(
-                          child: Text(
-                            "${(progress * 100).toStringAsFixed(0)}%",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "You Saved RM$currentSaved / RM$savingGoal",
-                    style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn().slideY(begin: 0.2),
+  Future<void> _initRefs() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to view savings')),
+        );
+      });
+      return;
+    }
+    _savingsGoalsRef = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('savingsGoals');
+    setState(() {
+      _initialized = true;
+    });
+  }
 
-            const SizedBox(height: 25),
+  Stream<double> _totalSavedStream() {
+    if (!_initialized) return const Stream.empty();
+    return _savingsGoalsRef.snapshots().map((snap) {
+      double total = 0;
+      for (final doc in snap.docs) {
+        final amt = doc.data()['currentAmount'];
+        if (amt is int) total += amt.toDouble();
+        if (amt is double) total += amt;
+      }
+      return total;
+    });
+  }
 
-            // --------------------------
-            //   ADD SAVINGS SECTION
-            // --------------------------
-            const Text(
-              "Add Savings",
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF11355F)),
-            ),
-            const SizedBox(height: 10),
+  Stream<double> _totalTargetStream() {
+    if (!_initialized) return const Stream.empty();
+    return _savingsGoalsRef.snapshots().map((snap) {
+      double total = 0;
+      for (final doc in snap.docs) {
+        final amt = doc.data()['targetAmount'];
+        if (amt is int) total += amt.toDouble();
+        if (amt is double) total += amt;
+      }
+      return total;
+    });
+  }
 
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4))
-                  ]),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: "Amount (RM)",
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // CATEGORY DROPDOWN
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedCategory,
-                        items: categories
-                            .map((c) => DropdownMenuItem(
-                                  value: c,
-                                  child: Text(c),
-                                ))
-                            .toList(),
-                        onChanged: (v) {
-                          setState(() => selectedCategory = v!);
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // DATE PICKER
-                  GestureDetector(
-                    onTap: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
-                        initialDate: selectedDate,
-                      );
-                      if (picked != null) {
-                        setState(() => selectedDate = picked);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade400),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat("dd MMM yyyy").format(selectedDate)),
-                          const Icon(Icons.calendar_month),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: noteController,
-                    decoration: InputDecoration(
-                      labelText: "Note (optional)",
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF11355F),
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: _addSaving,
-                    child: const Text(
-                      "Save",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  )
-                ],
-              ),
-            ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-
-            const SizedBox(height: 25),
-
-            // --------------------------
-            //   SAVINGS HISTORY
-            // --------------------------
-            const Text(
-              "Savings History",
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF11355F)),
-            ),
-            const SizedBox(height: 10),
-
-            ListView.builder(
-              itemCount: history.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, i) {
-                final h = history[i];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: _categoryColor(h["category"]),
-                        child: const Icon(Icons.savings, color: Colors.white),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "RM ${h["amount"]}",
-                              style: const TextStyle(
-                                  fontSize: 17,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              h["category"],
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            Text(
-                              DateFormat("dd MMM yyyy").format(h["date"]),
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 350.ms).slideX(begin: -0.2);
-              },
-            ),
-          ],
-        ),
+  Future<void> _openAddGoalForm({String? existingId, Map<String, dynamic>? existingData}) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddSavingsPage(
+        existingId: existingId,
+        existingData: existingData,
       ),
     );
   }
 
-  // --------------------------
-  //   ADD SAVING FUNCTION
-  // --------------------------
-  void _addSaving() {
-    if (amountController.text.isEmpty) return;
-
-    double amount = double.parse(amountController.text);
-
-    setState(() {
-      currentSaved += amount;
-      history.insert(0, {
-        "amount": amount,
-        "category": selectedCategory,
-        "date": selectedDate,
-        "note": noteController.text
-      });
-    });
-
-    amountController.clear();
-    noteController.clear();
+  Future<void> _deleteGoal(String id) async {
+    if (!_initialized) return;
+    
+    // Delete all contributions first
+    final contributionsRef = _savingsGoalsRef.doc(id).collection('contributions');
+    final contributions = await contributionsRef.get();
+    for (var doc in contributions.docs) {
+      await doc.reference.delete();
+    }
+    
+    // Delete the goal
+    await _savingsGoalsRef.doc(id).delete();
   }
 
-  // --------------------------
-  //  CATEGORY COLORS (UI)
-  // --------------------------
+  IconData _categoryIcon(String cat) {
+    switch (cat) {
+      case 'Emergency':
+        return Icons.health_and_safety;
+      case 'Travel':
+        return Icons.flight_takeoff;
+      case 'House':
+        return Icons.home;
+      case 'Wedding':
+        return Icons.favorite;
+      case 'Car':
+        return Icons.directions_car;
+      case 'Education':
+        return Icons.school;
+      default:
+        return Icons.savings;
+    }
+  }
+
   Color _categoryColor(String cat) {
     switch (cat) {
-      case "Emergency":
+      case 'Emergency':
         return Colors.redAccent;
-      case "Travel":
+      case 'Travel':
         return Colors.blueAccent;
-      case "House":
+      case 'House':
         return Colors.green;
-      case "Wedding":
+      case 'Wedding':
         return Colors.pinkAccent;
-      case "Car":
+      case 'Car':
         return Colors.orange;
-      case "Education":
+      case 'Education':
         return Colors.purple;
       default:
-        return Colors.grey;
+        return primaryBlue;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formatter = NumberFormat('#,##0.00');
+
+    return Scaffold(
+      backgroundColor: softBg,
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          "Savings Tracker",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: accentBlue,
+        onPressed: () => _openAddGoalForm(),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: !_initialized
+          ? const Center(child: CircularProgressIndicator())
+          : StreamBuilder<double>(
+              stream: _totalTargetStream(),
+              builder: (context, targetSnap) {
+                final totalTarget = targetSnap.data ?? 0.0;
+                return StreamBuilder<double>(
+                  stream: _totalSavedStream(),
+                  builder: (context, totalSnap) {
+                    final totalSaved = totalSnap.data ?? 0.0;
+                    final overallProgress = totalTarget > 0 ? (totalSaved / totalTarget).clamp(0.0, 1.0) : 0.0;
+
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: _savingsGoalsRef.orderBy('createdAt', descending: false).snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        final goals = snapshot.data!.docs;
+
+                        // If no goals, show empty state
+                        if (goals.isEmpty) {
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [cardGradientStart, cardGradientEnd],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryBlue.withValues(alpha: 0.2),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Total Saved',
+                                                style: TextStyle(color: Colors.white70, fontSize: 13),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'RM ${formatter.format(totalSaved)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 26,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              const Text(
+                                                'Total Target',
+                                                style: TextStyle(color: Colors.white70, fontSize: 13),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'RM ${formatter.format(totalTarget)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            totalTarget > 0 ? 'Overall Progress' : 'No goals set',
+                                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                          ),
+                                          Text(
+                                            totalTarget > 0 ? '${(overallProgress * 100).toStringAsFixed(0)}%' : '',
+                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: LinearProgressIndicator(
+                                          value: totalTarget > 0 ? overallProgress : 0,
+                                          minHeight: 10,
+                                          backgroundColor: Colors.white24,
+                                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ).animate().fadeIn().slideY(begin: 0.1),
+                              ),
+                              Expanded(
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(32.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.savings, size: 80, color: accentGreen.withValues(alpha: 0.5)),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          "No savings goals yet.\nCreate your first goal!",
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(fontSize: 16, color: Colors.black54),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        // Main content with goals
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Top Summary Card
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [cardGradientStart, cardGradientEnd],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryBlue.withValues(alpha: 0.2),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Total Saved',
+                                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              'RM ${formatter.format(totalSaved)}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 26,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            const Text(
+                                              'Total Target',
+                                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              'RM ${formatter.format(totalTarget)}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Overall Progress',
+                                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                                        ),
+                                        Text(
+                                          '${(overallProgress * 100).toStringAsFixed(0)}%',
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: overallProgress,
+                                        minHeight: 10,
+                                        backgroundColor: Colors.white24,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ).animate().fadeIn().slideY(begin: 0.1),
+
+                              const SizedBox(height: 24),
+
+                              // --- Savings Goals ---
+                              const Text(
+                                "My Savings Goals",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Display all goals as cards
+                              ...goals.map((doc) {
+                                final d = doc.data();
+                                final id = doc.id;
+                                final name = d['name'] ?? 'Unnamed Goal';
+                                final category = d['category'] ?? 'Other';
+                                final targetAmount = (d['targetAmount'] as num?)?.toDouble() ?? 0.0;
+                                final currentAmount = (d['currentAmount'] as num?)?.toDouble() ?? 0.0;
+                                final categoryColor = _categoryColor(category);
+                                final progress = targetAmount > 0 ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SavingsDetailPage(
+                                          goalId: id,
+                                          goalName: name,
+                                          category: category,
+                                          targetAmount: targetAmount,
+                                          currentAmount: currentAmount,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Dismissible(
+                                    key: Key(id),
+                                    direction: DismissDirection.horizontal,
+                                    background: Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(255, 82, 15, 10),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      child: const Icon(Icons.delete, color: Colors.white),
+                                    ),
+                                    secondaryBackground: Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      child: const Icon(Icons.edit, color: Colors.white),
+                                    ),
+                                    confirmDismiss: (direction) async {
+                                      if (direction == DismissDirection.startToEnd) {
+                                        if (!context.mounted) return false;
+                                        final result = await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext dialogContext) {
+                                            return AlertDialog(
+                                              title: const Text("Confirm Delete"),
+                                              content: const Text("Delete this savings goal and all its contributions?"),
+                                              actions: <Widget>[
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                                                  child: const Text("Cancel"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                                                  child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                        return result ?? false;
+                                      } else if (direction == DismissDirection.endToStart) {
+                                        if (!mounted) return false;
+                                        await _openAddGoalForm(
+                                          existingId: id,
+                                          existingData: d,
+                                        );
+                                        return false;
+                                      }
+                                      return false;
+                                    },
+                                    onDismissed: (direction) async {
+                                      if (direction == DismissDirection.startToEnd) {
+                                        await _deleteGoal(id);
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Goal deleted successfully')),
+                                        );
+                                      }
+                                    },
+                                    child: Card(
+                                      color: cardBg,
+                                      margin: const EdgeInsets.symmetric(vertical: 6),
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    color: categoryColor.withValues(alpha: 0.15),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: Icon(_categoryIcon(category), color: categoryColor, size: 28),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        name,
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 16,
+                                                          color: navy,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        category,
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: Colors.grey.shade600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade100,
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        'RM ${formatter.format(currentAmount)} / RM ${formatter.format(targetAmount)}',
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: navy,
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                        decoration: BoxDecoration(
+                                                          color: accentGreen.withValues(alpha: 0.15),
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        child: Text(
+                                                          '${(progress * 100).toStringAsFixed(0)}%',
+                                                          style: const TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: accentGreen,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    child: LinearProgressIndicator(
+                                                      value: progress,
+                                                      minHeight: 10,
+                                                      backgroundColor: Colors.grey.shade300,
+                                                      valueColor: const AlwaysStoppedAnimation<Color>(accentGreen),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+
+                              const SizedBox(height: 80),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+    );
   }
 }

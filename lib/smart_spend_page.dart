@@ -7,6 +7,7 @@ import 'smart_spend_main_page.dart';
 // Color theme matching your app
 const Color primaryBlue = Color(0xFF11355F);
 const Color accentBlue = Color(0xFF234A78);
+
 const Color softGray = Color(0xFFF2F2F4);
 const Color cardGradientStart = Color(0xFF3B8D99);
 const Color cardGradientEnd = Color(0xFF4F67B5);

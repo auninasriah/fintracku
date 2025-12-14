@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart' as fb_opt;
 
 import 'splash_page.dart';
@@ -17,6 +18,14 @@ const Color softGray = Color(0xFFF2F2F4);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env file
+  try {
+    await dotenv.load();
+    debugPrint("✅ .env file loaded successfully!");
+  } catch (e) {
+    debugPrint("⚠️ Warning: Could not load .env file: $e");
+  }
 
   try {
     await Firebase.initializeApp(

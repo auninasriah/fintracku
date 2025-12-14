@@ -8,9 +8,10 @@ import 'home_page.dart';
 
 const Color primaryBlue = Color(0xFF11355F);
 const Color accentBlue = Color(0xFF234A78);
+const Color cardGradientEnd = Color(0xFF3F2A61); // Vibrant Purple
+const Color cardGradientStart = Color(0xFF3C79C1);
 const Color softGray = Color(0xFFF2F2F4);
-const Color cardGradientStart = Color(0xFF3B8D99);
-const Color cardGradientEnd = Color(0xFF4F67B5);
+
 
 class SmartSpendMainPage extends StatefulWidget {
   const SmartSpendMainPage({super.key});
@@ -792,6 +793,15 @@ class _SmartSpendMainPageState extends State<SmartSpendMainPage> {
             );
           },
         ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           'Smart Spend',
           style: GoogleFonts.inter(
@@ -800,7 +810,7 @@ class _SmartSpendMainPageState extends State<SmartSpendMainPage> {
             fontSize: 18,
           ),
         ),
-        backgroundColor: primaryBlue,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
       ),

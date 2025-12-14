@@ -19,6 +19,8 @@ extension IterableMapIndexed<E> on Iterable<E> {
 // --- Improved Color Definitions ---
 const Color _primary = Color(0xFF11355F); // Dark Blue (for primary elements)
 const Color _accentRed = Color.fromARGB(255, 105, 13, 13); // Red/Pink (for expenses, negative)
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+const Color cardGradientStart = Color(0xFF3C79C1);
 const Color _softBg = Color(0xFFF7F9FC); // Light background
 const Color _cardBg = Colors.white; // Pure white for cards
 const Color _navy = Color(0xFF0D1B2A); // dark navy for appbar text
@@ -100,13 +102,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
     return months[month - 1];
   }
 
-  static int _monthNumber(String name) {
-    const months = [
-      "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-    ];
-    return months.indexOf(name) + 1;
-  }
+
 
   // Helper: Remove time from DateTime
   DateTime _strip(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -143,7 +139,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: _primary.withOpacity(0.4),
+                            color: _primary.withValues(alpha: 0.4),
                             blurRadius: 12,
                             spreadRadius: 2,
                             offset: const Offset(0, 4),
@@ -184,7 +180,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
           ),
           boxShadow: [
             BoxShadow(
-              color: startColor.withOpacity(0.18),
+              color: startColor.withValues(alpha: 0.18),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -283,24 +279,33 @@ class _ExpensesPageState extends State<ExpensesPage> {
     return Scaffold(
       backgroundColor: _softBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _navy),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           "Expenses Tracker",
           style: TextStyle(
-            color: _navy,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month, color: _navy),
+            icon: const Icon(Icons.calendar_month, color: Colors.white),
             tooltip: "View by Calendar",
             onPressed: _showCalendarView,
           ),
@@ -403,7 +408,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.money_off, size: 80, color: _accentRed.withOpacity(0.5)),
+                          Icon(Icons.money_off, size: 80, color: _accentRed.withValues(alpha: 0.5)),
                           const SizedBox(height: 16),
                           Text(
                             "All clear! No expenses recorded for ${monthName(displayedMonth)}.",
@@ -655,10 +660,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
                               onDismissed: (direction) async {
                                 if (direction == DismissDirection.startToEnd) {
                                   await expensesCol.doc(doc.id).delete();
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Expense deleted successfully')),
-                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Expense deleted successfully')),
+                                    );
+                                  }
                                 }
                               },
                               child: Card(
@@ -703,7 +709,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
       ),
 
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color.fromARGB(255, 14, 25, 102),
+        backgroundColor: const Color(0xFF3C79C1),
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpensePage()));
         },
@@ -948,7 +954,7 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
                 decoration: BoxDecoration(
                   gradient: hasExpense
                       ? const LinearGradient(
-                          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                          colors: [Color(0xFF3C79C1), Color(0xFF5A9FD4)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
@@ -956,13 +962,13 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
                   color: hasExpense ? null : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: hasExpense
-                      ? Border.all(color: const Color(0xFFFF6B6B), width: 2)
+                      ? Border.all(color: const Color(0xFF3C79C1), width: 2)
                       : null,
                   boxShadow: hasExpense
                       ? [
                           BoxShadow(
-                            color: const Color(0xFFFF6B6B)
-                                .withAlpha((0.25 * 255).round()),
+                            color: const Color(0xFF3C79C1)
+                                .withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           )

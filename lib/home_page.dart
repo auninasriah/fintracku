@@ -1,4 +1,5 @@
 // home_page.dart
+import 'package:fintrack/ai_finance_assistant_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,247 +7,246 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:math'; 
-
-
-// Import your pages (assuming these are defined elsewhere)
+import 'package:rxdart/rxdart.dart';
 import 'income_page.dart';
 import 'expenses_page.dart';
 import 'savings_page.dart';
 import 'smart_spend_page.dart';
 import 'smart_spend_main_page.dart';
-import 'finance_page.dart'; 
+import 'finance_page.dart';
+import 'settings_page.dart';
+import 'profile_avatar.dart';
+import 'profile_setup_page.dart';
+import 'ai_finance_assistant_page.dart'; 
 
-// --- COLOR DEFINITIONS ---
-const Color primaryBlue = Color(0xFF11355F); // Dark Navy Blue
-const Color accentBlue = Color(0xFF234A78); // Medium Blue
-const Color lightAccent = Color(0xFF4A72AE); // Lighter accent blue
+// --- COLOR DEFINITIONS (Vibrant Blue & Purple Theme) ---
+const Color primaryBlue = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color accentBlue = Color(0xFF2A466F); // Deep Blue
+const Color lightAccent = Color(0xFF3F2A61); // Vibrant Purple
 
 // --- NEW DESIGN COLORS ---
-const Color cardGradientStart = Color(0xFF3B8D99); // Soft Teal for balance card gradient
-const Color cardGradientEnd = Color(0xFF4F67B5); // Soft Indigo for balance card gradient
-const Color actionIconBackground = Color(0xFFE8F5FF); // Very Light Blue for quick actions background
-const Color cardShadowColor = Color(0x3311355F); // Shadow for primary elements
+const Color cardGradientStart = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+const Color actionIconBackground = Color(0xFFE3EFFF); // Very Light Blue
+const Color cardShadowColor = Color(0x333C79C1); // Shadow with vibrant blue tone
 const Color spendingRed = Color(0xFFC62828);
 const Color spendingGreen = Color(0xFF4CAF50);
 
-// ================= PLACEHOLDER PAGES (For navigation) =================
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: const Center(child: Text('Settings page')),
-    );
-  }
-}
 
 // ================= CHAT ASSISTANT WIDGET =================
 
 /// Represents a single message in the chat.
-class ChatMessage {
-  final String text;
-  final String sender; // 'user' or 'assistant'
-  final DateTime timestamp;
+// class ChatMessage {
+//   final String text;
+//   final String sender; // 'user' or 'assistant'
+//   final DateTime timestamp;
 
-  ChatMessage({
-    required this.text,
-    required this.sender,
-    required this.timestamp,
-  });
-}
+//   ChatMessage({
+//     required this.text,
+//     required this.sender,
+//     required this.timestamp,
+//   });
+// }
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+// class ChatScreen extends StatefulWidget {
+//   const ChatScreen({super.key});
 
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
+//   @override
+//   State<ChatScreen> createState() => _ChatScreenState();
+// }
 
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      text:
-          "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
-      sender: 'assistant',
-      timestamp: DateTime.now(),
-    ),
-  ];
-  bool _isSending = false;
+// class _ChatScreenState extends State<ChatScreen> {
+//   final TextEditingController _controller = TextEditingController();
+//   final ScrollController _scrollController = ScrollController();
+//   final List<ChatMessage> _messages = [
+//     ChatMessage(
+//       text:
+//           "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
+//       sender: 'assistant',
+//       timestamp: DateTime.now(),
+//     ),
+//   ];
+//   bool _isSending = false;
 
-  void _sendMessage() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+//   void _sendMessage() async {
+//     final text = _controller.text.trim();
+//     if (text.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage(text: text, sender: 'user', timestamp: DateTime.now()));
-      _controller.clear();
-      _isSending = true;
-    });
+//     setState(() {
+//       _messages.add(ChatMessage(text: text, sender: 'user', timestamp: DateTime.now()));
+//       _controller.clear();
+//       _isSending = true;
+//     });
 
-    _scrollToBottom();
+//     _scrollToBottom();
 
-    final assistantResponse = await _getAssistantResponse(text);
+//     final assistantResponse = await _getAssistantResponse(text);
 
-    if (!mounted) return; // ✅ FIXED: Guard with mounted check
+//     if (!mounted) return; // ✅ FIXED: Guard with mounted check
 
-    setState(() {
-      _messages.add(ChatMessage(
-        text: assistantResponse,
-        sender: 'assistant',
-        timestamp: DateTime.now().add(const Duration(seconds: 1)),
-      ));
-      _isSending = false;
-    });
+//     setState(() {
+//       _messages.add(ChatMessage(
+//         text: assistantResponse,
+//         sender: 'assistant',
+//         timestamp: DateTime.now().add(const Duration(seconds: 1)),
+//       ));
+//       _isSending = false;
+//     });
 
-    _scrollToBottom();
-  }
+//     _scrollToBottom();
+//   }
 
-  Future<String> _getAssistantResponse(String prompt) async {
-    await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+//   Future<String> _getAssistantResponse(String prompt) async {
+//     await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
 
-    final p = prompt.toLowerCase();
-    if (p.contains('budget') || p.contains('spending')) {
-      return "Budgeting tip: Try the '50/30/20 Rule'—50% needs, 30% wants, 20% savings. Our Budget tab can help you track this!";
-    } else if (p.contains('expense')) {
-      return "To track a new expense, simply tap the 'Expenses' button in the Quick Actions section on the Home Page.";
-    } else if (p.contains('hello') || p.contains('hi')) {
-      return "Hi there! How can I assist you with your finances today? Try asking for a budgeting tip!";
-    } else {
-      return "I'm focusing on student finance advice. Can you ask me about budgeting, saving, or tracking expenses?";
-    }
-  }
+//     final p = prompt.toLowerCase();
+//     if (p.contains('budget') || p.contains('spending')) {
+//       return "Budgeting tip: Try the '50/30/20 Rule'—50% needs, 30% wants, 20% savings. Our Budget tab can help you track this!";
+//     } else if (p.contains('expense')) {
+//       return "To track a new expense, simply tap the 'Expenses' button in the Quick Actions section on the Home Page.";
+//     } else if (p.contains('hello') || p.contains('hi')) {
+//       return "Hi there! How can I assist you with your finances today? Try asking for a budgeting tip!";
+//     } else {
+//       return "I'm focusing on student finance advice. Can you ask me about budgeting, saving, or tracking expenses?";
+//     }
+//   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
+//   void _scrollToBottom() {
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       if (_scrollController.hasClients) {
+//         _scrollController.animateTo(
+//           _scrollController.position.maxScrollExtent,
+//           duration: const Duration(milliseconds: 300),
+//           curve: Curves.easeOut,
+//         );
+//       }
+//     });
+//   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
+//   @override
+//   void dispose() {
+//     _controller.dispose();
+//     _scrollController.dispose();
+//     super.dispose();
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('AI Finance Assistant', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        backgroundColor: cardGradientStart,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Message List
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isUser = message.sender == 'user';
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8.0),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isUser ? primaryBlue : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(16).copyWith(
-                        bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(16),
-                        bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(2),
-                      ),
-                    ),
-                    child: Text(
-                      message.text,
-                      style: GoogleFonts.inter(
-                        color: isUser ? Colors.white : Colors.black87,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         flexibleSpace: Container(
+//           decoration: const BoxDecoration(
+//             gradient: LinearGradient(
+//               colors: [cardGradientStart, cardGradientEnd],
+//               begin: Alignment.topLeft,
+//               end: Alignment.bottomRight,
+//             ),
+//           ),
+//         ),
+//         title: Text('AI Finance Assistant', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+//         backgroundColor: Colors.transparent,
+//         foregroundColor: Colors.white,
+//         elevation: 0,
+//       ),
+//       body: Column(
+//         children: [
+//           // Message List
+//           Expanded(
+//             child: ListView.builder(
+//               controller: _scrollController,
+//               padding: const EdgeInsets.all(16.0),
+//               itemCount: _messages.length,
+//               itemBuilder: (context, index) {
+//                 final message = _messages[index];
+//                 final isUser = message.sender == 'user';
+//                 return Align(
+//                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+//                   child: Container(
+//                     margin: const EdgeInsets.only(bottom: 8.0),
+//                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//                     constraints: BoxConstraints(
+//                       maxWidth: MediaQuery.of(context).size.width * 0.75,
+//                     ),
+//                     decoration: BoxDecoration(
+//                       color: isUser ? primaryBlue : Colors.grey.shade200,
+//                       borderRadius: BorderRadius.circular(16).copyWith(
+//                         bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(16),
+//                         bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(2),
+//                       ),
+//                     ),
+//                     child: Text(
+//                       message.text,
+//                       style: GoogleFonts.inter(
+//                         color: isUser ? Colors.white : Colors.black87,
+//                         fontSize: 13.5,
+//                         fontWeight: FontWeight.w400,
+//                       ),
+//                     ),
+//                   ),
+//                 );
+//               },
+//             ),
+//           ),
 
-          // Input Field
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(color: Colors.grey.shade300, blurRadius: 4, offset: const Offset(0, -2))
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    enabled: !_isSending,
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
-                    decoration: InputDecoration(
-                      hintText: _isSending ? 'Assistant is typing...' : 'Ask a finance question...',
-                      hintStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    ),
-                    onSubmitted: _isSending ? null : (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8.0),
-                GestureDetector(
-                  onTap: _isSending ? null : _sendMessage,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isSending ? Colors.grey : primaryBlue,
-                    ),
-                    child: _isSending
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : const Icon(LucideIcons.send, color: Colors.white, size: 24),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//           // Input Field
+//           Container(
+//             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+//             decoration: BoxDecoration(
+//               color: Colors.white,
+//               boxShadow: [
+//                 BoxShadow(color: Colors.grey.shade300, blurRadius: 4, offset: const Offset(0, -2))
+//               ],
+//             ),
+//             child: Row(
+//               children: [
+//                 Expanded(
+//                   child: TextField(
+//                     controller: _controller,
+//                     enabled: !_isSending,
+//                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
+//                     decoration: InputDecoration(
+//                       hintText: _isSending ? 'Assistant is typing...' : 'Ask a finance question...',
+//                       hintStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
+//                       border: OutlineInputBorder(
+//                         borderRadius: BorderRadius.circular(25.0),
+//                         borderSide: BorderSide.none,
+//                       ),
+//                       filled: true,
+//                       fillColor: Colors.grey.shade100,
+//                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+//                     ),
+//                     onSubmitted: _isSending ? null : (_) => _sendMessage(),
+//                   ),
+//                 ),
+//                 const SizedBox(width: 8.0),
+//                 GestureDetector(
+//                   onTap: _isSending ? null : _sendMessage,
+//                   child: Container(
+//                     padding: const EdgeInsets.all(12),
+//                     decoration: BoxDecoration(
+//                       shape: BoxShape.circle,
+//                       color: _isSending ? Colors.grey : primaryBlue,
+//                     ),
+//                     child: _isSending
+//                         ? const SizedBox(
+//                             width: 24,
+//                             height: 24,
+//                             child: CircularProgressIndicator(
+//                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+//                               strokeWidth: 3,
+//                             ),
+//                           )
+//                         : const Icon(LucideIcons.send, color: Colors.white, size: 24),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // ================= ANIMATED PATTERN BACKGROUND =================
 class AnimatedPatternBackground extends StatefulWidget {
@@ -428,21 +428,21 @@ class _AutoSlidingInfoCarouselState extends State<AutoSlidingInfoCarousel> {
     {
       'title': 'Student Budgeting 101',
       'subtitle': 'Spend less than you earn! Track your money diligently.',
-      'color': const Color(0xFF00ADB5), // Teal
+      'color': const Color(0xFF3C79C1), // Vibrant Light Blue
       'imageUrl':
           'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       'title': 'The Power of Habit',
       'subtitle': 'Your tiny daily spending habits define your financial future.',
-      'color': const Color(0xFF2E8BC0), // Bright Blue
+      'color': const Color(0xFF2A466F), // Deep Blue
       'imageUrl':
           'https://images.unsplash.com/photo-1579621970795-87facc2f976d?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       'title': 'Need a Side Hustle?',
       'subtitle': 'Explore simple ways to earn extra cash between classes.',
-      'color': const Color(0xFF6A1B9A), // Deep Purple
+      'color': const Color(0xFF3F2A61), // Vibrant Purple
       'imageUrl':
           'https://images.unsplash.com/photo-1517048676732-d65bc937f952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTl8fHNpZGUlMjBodXN0bGV8ZW58MHx8fHwxNjk5NDQ1Mjg0fDA&ixlib=rb-4.0.3&q=80&w=1080',
     },
@@ -706,7 +706,44 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // --- WIDGET 1: Gradient Income Card (Balance Card) with Name & Animated Pattern ---
+    // --- Firestore Stream for Total Savings ---
+  Stream<double> _getTotalSavingsStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('savingsGoals')
+        .snapshots()
+        .map((snapshot) {
+      double total = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        final amt = data?['currentAmount'];
+        if (amt is int) total += amt.toDouble();
+        if (amt is double) total += amt;
+      }
+      return total;
+    });
+  }
+
+  // --- Firestore Stream for Current Balance (Income - Expenses + Savings) ---
+  Stream<double> _getCurrentBalanceStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return Rx.combineLatest3(
+      _getTotalIncomeStream(),
+      _getTotalExpensesStream(),
+      _getTotalSavingsStream(),
+      (double income, double expenses, double savings) {
+        return income - expenses + savings;
+      },
+    );
+  } 
+
+    // --- WIDGET 1: Gradient Income Card (Balance Card) with Name & Animated Pattern ---
   Widget _incomeCard(BuildContext context) {
     return StreamBuilder<String>(
       stream: _getUserNameStream(),
@@ -714,9 +751,9 @@ class _HomePageState extends State<HomePage> {
         final userName = nameSnapshot.data ?? 'User';
 
         return StreamBuilder<double>(
-          stream: _getTotalIncomeStream(),
-          builder: (context, incomeSnapshot) {
-            final balance = incomeSnapshot.data ?? 0.0;
+          stream: _getCurrentBalanceStream(),
+          builder: (context, balanceSnapshot) {
+            final balance = balanceSnapshot.data ?? 0.0;
             final displayBalance = _isBalanceVisible ? balance.toStringAsFixed(2) : '••••••';
             final displayIcon = _isBalanceVisible ? LucideIcons.eye : LucideIcons.eyeOff;
 
@@ -752,18 +789,38 @@ class _HomePageState extends State<HomePage> {
                   // Content
                   Column(
                     children: [
-                      // Header: Welcome Message + Logout (side by side)
+                      // Header: Profile Avatar + Welcome Message + Logout (side by side)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Profile Avatar (tap to navigate to ProfileSetupPage)
+                          ProfileAvatar(
+                            radius: 18,
+                            showEditIcon: true,
+                            onTap: () async {  // ← Add 'async'
+                              // Push the page and wait for result
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ProfileSetupPage()),
+                              );
+                              
+                              if (result == true && mounted) {
+                                setState(() {
+                                });
+                              }
+                            },
+                          ),
+
+                          const SizedBox(width: 12),
+
                           // Welcome Message with Glow
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withValues(alpha: 0.3), // ✅ FIXED
+                                    color: Colors.white.withValues(alpha: 0.3), 
                                     blurRadius: 20,
                                     spreadRadius: 0,
                                     offset: const Offset(0, 0),
@@ -773,8 +830,8 @@ class _HomePageState extends State<HomePage> {
                               child: Text(
                                 'Hye! Welcome,\n$userName',
                                 style: GoogleFonts.inter(
-                                  color: Colors.white,
-                                  fontSize: 18,
+                                  color: Colors.white70,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   letterSpacing: 0.3,
                                   height: 1.2,
@@ -792,6 +849,8 @@ class _HomePageState extends State<HomePage> {
                               icon: const Icon(LucideIcons.logOut, color: Colors.white, size: 20),
                               tooltip: 'Logout',
                               onPressed: () async {
+                                if (!mounted) return; // ✅ Guard before showing dialog
+                                
                                 final confirmed = await showGeneralDialog<bool>(
                                   context: context,
                                   barrierDismissible: true,
@@ -933,7 +992,7 @@ class _HomePageState extends State<HomePage> {
 
                       // Title
                       Text(
-                        'Total Income',
+                        'Current Balance',
                         style: GoogleFonts.inter(
                           color: Colors.white70,
                           fontSize: 13,
@@ -970,7 +1029,7 @@ class _HomePageState extends State<HomePage> {
                               displayBalance,
                               style: GoogleFonts.inter(
                                 color: Colors.white,
-                                fontSize: 42,
+                                fontSize: 30,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
@@ -993,7 +1052,7 @@ class _HomePageState extends State<HomePage> {
                       ),
 
                       // Loading indicator
-                      if (incomeSnapshot.connectionState == ConnectionState.waiting)
+                      if (balanceSnapshot.connectionState == ConnectionState.waiting)
                         const Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: SizedBox(
@@ -1037,7 +1096,7 @@ class _HomePageState extends State<HomePage> {
             child: Text(
               'Quick Actions',
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
                 letterSpacing: 0.3,
@@ -1121,7 +1180,7 @@ class _HomePageState extends State<HomePage> {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: primaryBlue,
+                    color:  Colors.black87,
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -1131,7 +1190,7 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   'RM ${currentSpending.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: spendingRed,
                     letterSpacing: 0.5,
@@ -1231,7 +1290,7 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         'Additional Tips',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                           letterSpacing: 0.3,
@@ -1256,7 +1315,7 @@ class _HomePageState extends State<HomePage> {
           child: FloatingActionButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const ChatScreen()),
+                MaterialPageRoute(builder: (context) => AIFinanceAssistant()),
               );
             },
             heroTag: "chatFab",
