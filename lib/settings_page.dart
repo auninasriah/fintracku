@@ -271,28 +271,94 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF3C79C1), Color.fromARGB(255, 125, 86, 187)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           'Settings',
           style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: Colors.white,
+            fontSize: 18,
           ),
         ),
-        backgroundColor: const Color(0xFF3C79C1),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF6F7FB),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           children: [
             // SECTION 1: Account Settings
             SettingsCard(
-              title: '👤 ACCOUNT SETTINGS',
+              title: 'ACCOUNT SETTINGS',
               children: [
-                // Profile Picture
+                // Profile Picture Display
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF3C79C1), Color.fromARGB(255, 125, 86, 187)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3C79C1).withValues(alpha: 0.2),
+                              blurRadius: 15,
+                              spreadRadius: 2,
+                            )
+                          ],
+                        ),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _userName,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF3C79C1),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _userEmail,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                // Profile Picture Edit
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -347,88 +413,217 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // SECTION 2: Change Password
             SettingsCard(
-              title: '🔐 CHANGE PASSWORD',
+              title: ' CHANGE PASSWORD',
               children: [
                 // Current Password
-                TextField(
-                  controller: _currentPasswordController,
-                  obscureText: !_showCurrentPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Current Password',
-                    hintText: 'Enter current password',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _showCurrentPassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() => _showCurrentPassword = !_showCurrentPassword);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // New Password
-                TextField(
-                  controller: _newPasswordController,
-                  obscureText: !_showNewPassword,
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    hintText: 'Enter new password',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _showNewPassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() => _showNewPassword = !_showNewPassword);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Confirm Password
-                TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_showConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    hintText: 'Confirm new password',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() => _showConfirmPassword = !_showConfirmPassword);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Save Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _changePassword,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3C79C1),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'Update Password',
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Password',
                       style: GoogleFonts.inter(
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Colors.grey.shade700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _currentPasswordController,
+                      obscureText: !_showCurrentPassword,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter current password',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF3C79C1), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _showCurrentPassword ? Icons.visibility : Icons.visibility_off,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            setState(() => _showCurrentPassword = !_showCurrentPassword);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // New Password
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'New Password',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _newPasswordController,
+                      obscureText: !_showNewPassword,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter new password',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF3C79C1), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _showNewPassword ? Icons.visibility : Icons.visibility_off,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            setState(() => _showNewPassword = !_showNewPassword);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Confirm Password
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Confirm Password',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: !_showConfirmPassword,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Confirm new password',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF3C79C1), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            setState(() => _showConfirmPassword = !_showConfirmPassword);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Save Button
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3C79C1).withValues(alpha: 0.2),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _changePassword,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF3C79C1), Color.fromARGB(255, 125, 86, 187)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Update Password',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -440,7 +635,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // SECTION 3: App Information
             SettingsCard(
-              title: 'ℹ️ APP INFORMATION',
+              title: 'APP INFORMATION',
               children: [
                 SettingsTile(
                   label: 'Version Number',
@@ -465,22 +660,43 @@ class _SettingsPageState extends State<SettingsPage> {
             // SECTION 4: Logout
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _logout,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Logout',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withValues(alpha: 0.2),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  )
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _logout,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.red.shade400, Colors.red.shade600],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Logout',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

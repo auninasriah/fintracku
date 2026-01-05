@@ -409,9 +409,9 @@ class _IncomePageState extends State<IncomePage> {
                 
                 const Text("Recent Income",
                     style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: primaryBlue)),
+                        color: Color.fromARGB(255, 0, 0, 0))),
                 const SizedBox(height: 12),
                 
                 // Daily grouped transactions with Dismissible
@@ -682,22 +682,22 @@ class _IncomePageState extends State<IncomePage> {
             "Income Distribution",
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: primaryBlue,
+              fontSize: 15,
+              color: Color.fromARGB(255, 0, 0, 0),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 50),
           Center(
             child: SizedBox(
-              height: 180,
-              width: 180,
+              height: 185,
+              width: 160,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   PieChart(
                     PieChartData(
                       sections: sections,
-                      centerSpaceRadius: 60,
+                      centerSpaceRadius: 50,
                       sectionsSpace: 4,
                       startDegreeOffset: 270,
                     ),
@@ -716,7 +716,7 @@ class _IncomePageState extends State<IncomePage> {
                         "RM ${total.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                          fontSize: 15,
                           color: incomeGreen,
                         ),
                       ),
@@ -726,7 +726,7 @@ class _IncomePageState extends State<IncomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           // Dynamic Legend below the chart
           ...categories.entries.map((e) =>
             Padding(
@@ -851,7 +851,7 @@ class _CalendarBottomSheetState extends State<_CalendarBottomSheet> {
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue, Color(0xFF2A466F)],
+                colors: [primaryBlue, cardGradientEnd],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

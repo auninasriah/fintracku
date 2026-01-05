@@ -9,7 +9,8 @@ class CreateAccountPage extends StatefulWidget {
   State<CreateAccountPage> createState() => _CreateAccountPageState();
 }
 
-class _CreateAccountPageState extends State<CreateAccountPage> {
+class _CreateAccountPageState extends State<CreateAccountPage>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -21,6 +22,44 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       TextEditingController();
 
   bool _isLoading = false;
+
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+    
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
+    );
+    
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   Future<void> _createAccount() async {
     if (!_formKey.currentState!.validate()) return;
@@ -93,7 +132,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryBlue = const Color(0xFF006CFF);
+    const Color cardGradientStart = Color(0xFF3C79C1); // Vibrant Light Blue
+    const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FF),
@@ -104,32 +144,52 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             children: [
               const SizedBox(height: 40),
 
-              /// Title
-              Text(
-                "Create Account",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: primaryBlue,
+              /// Application Logo - Fade Animation
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Image.asset(
+                  'assets/images/myapp.png',
+                  height: 80,
+                  width: 80,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              /// Title - Slide Animation
+              SlideTransition(
+                position: _slideAnimation,
+                child: Text(
+                  "Create Account",
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: cardGradientStart,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
 
-              Text(
-                "Register to get started",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey.shade600,
+              /// Subtitle - Slide Animation
+              SlideTransition(
+                position: _slideAnimation,
+                child: Text(
+                  "Register to get started",
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 35),
 
-              /// White Card Container
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+              /// White Card Container - Slide Animation
+              SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
@@ -180,7 +240,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                 ? "Enter your email"
                                 : null,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 15),
 
                       /// Password
                       TextFormField(
@@ -200,7 +260,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                 ? "Password must be at least 6 characters"
                                 : null,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 15),
 
                       /// Confirm Password
                       TextFormField(
@@ -232,15 +292,15 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             borderRadius: BorderRadius.circular(30),
                             gradient: const LinearGradient(
                               colors: [
-                                Color(0xFF006CFF),
-                                Color(0xFF00A4FF),
+                                Color(0xFF3C79C1), // Vibrant Light Blue
+                                Color.fromARGB(255, 125, 86, 187), // Vibrant Purple
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.blueAccent.withOpacity(0.35),
+                                color: const Color(0xFF3C79C1).withOpacity(0.35),
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               )
@@ -279,19 +339,19 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                           onTap: () => Navigator.pushReplacementNamed(
                               context, '/login'),
                           child: RichText(
-                            text: TextSpan(
+                            text: const TextSpan(
                               text: "Already have an account? ",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Color(0xFF6C757D),
-                                fontSize: 15,
+                                fontSize: 14,
                               ),
                               children: [
                                 TextSpan(
                                   text: "Login",
                                   style: TextStyle(
-                                    color: primaryBlue,
+                                    color: Color(0xFF3C79C1),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                    fontSize: 14,
                                   ),
                                 )
                               ],
@@ -302,6 +362,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     ],
                   ),
                 ),
+              ),
               ),
 
               const SizedBox(height: 40),

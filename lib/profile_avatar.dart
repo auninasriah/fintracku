@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
+// --- COLOR DEFINITIONS (Vibrant Blue & Purple Theme) ---
+const Color cardGradientStart = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+
 /// ProfileAvatar Widget
 /// Displays the user's profile picture if saved, otherwise shows a default avatar
 /// This widget automatically loads the saved image path from SharedPreferences
@@ -78,7 +82,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
           if (widget.showEditIcon)
             Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF3C79C1), // Light blue color
+                color: cardGradientStart, // Vibrant Light Blue
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(4),

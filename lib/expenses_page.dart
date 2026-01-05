@@ -481,19 +481,19 @@ class _ExpensesPageState extends State<ExpensesPage> {
                           children: [
                             const Text("Spending Distribution",
                                 style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 18, color: _primary)),
-                            const SizedBox(height: 16),
+                                    fontWeight: FontWeight.bold, fontSize: 15, color: Color.fromARGB(255, 0, 0, 0))),
+                            const SizedBox(height: 50),
                             Center(
                               child: SizedBox(
-                                height: 180, 
-                                width: 180,  
+                                height: 185,
+                                width: 160,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
                                     PieChart(
                                       PieChartData(
                                         sections: pieSections,
-                                        centerSpaceRadius: 60, 
+                                        centerSpaceRadius: 50,
                                         sectionsSpace: 4,
                                         startDegreeOffset: 270,
                                       ),
@@ -511,7 +511,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                                           "RM ${totalExpenses.toStringAsFixed(2)}",
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 20,
+                                              fontSize: 15,
                                               color: _accentRed), 
                                         ),
                                       ],
@@ -520,7 +520,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
                             // Dynamic Legend below the chart
                             ...categoryTotals.entries.map((e) =>
                                 Padding(
@@ -566,7 +566,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                           children: [
                             const Text("Spending Habits",
                                 style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 18, color: _primary)),
+                                    fontWeight: FontWeight.bold, fontSize: 15, color: Color.fromARGB(255, 0, 0, 0))),
                             const SizedBox(height: 12),
                             const SizedBox(height: 8),
                              _buildInsightItem(
@@ -582,7 +582,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       // --- Recent Expenses List (Grouped by Date) ---
                       const Text("Recent Expenses",
                           style:
-                              TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _primary)),
+                              TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color.fromARGB(255, 0, 0, 0))),
                       const SizedBox(height: 8),
 
                       // Iterate through sorted grouped expenses

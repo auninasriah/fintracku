@@ -199,7 +199,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
           if (mounted) Navigator.pop(context);
         } else {
-          // For new income, show confirmation popup
+          // For new income, show confirmation popup for auto-savings
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("✅ Income added successfully!"),
@@ -212,7 +212,9 @@ class _AddIncomePageState extends State<AddIncomePage> {
           await Future.delayed(const Duration(milliseconds: 500));
 
           if (mounted) {
-            _showIncomeConfirmation();
+            // Calculate 10% auto-savings
+            final autoSavingsAmount = amount * 0.10;
+            await _showAutoSavingsConfirmation(autoSavingsAmount, category);
           }
         }
       }
@@ -246,9 +248,9 @@ class _AddIncomePageState extends State<AddIncomePage> {
     }
   }
 
-  /// Show confirmation popup for new income
-  Future<void> _showIncomeConfirmation() async {
-    final shouldNavigateToSavings = await showGeneralDialog<bool>(
+  /// Show confirmation popup for auto-savings (10% of income)
+  Future<void> _showAutoSavingsConfirmation(double savingsAmount, String incomeCategory) async {
+    final shouldSave = await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '',
@@ -294,7 +296,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     const SizedBox(height: 18),
 
                     Text(
-                      "Save to Savings?",
+                      "💰 Auto-Save 10%?",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 20,
@@ -305,11 +307,46 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     const SizedBox(height: 8),
 
                     Text(
-                      "Would you like to save this income to your savings account?",
+                      "We've calculated 10% of your income as savings:",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         color: Colors.black54,
-                        fontSize: 14,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF58C5FF).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF58C5FF).withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        'RM ${savingsAmount.toStringAsFixed(2)}',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF58C5FF),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Text(
+                      "Would you like to save this amount?",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: Colors.black54,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -318,7 +355,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
                     Row(
                       children: [
-                        // Skip Button
+                        // Decline Button
                         Expanded(
                           child: TextButton(
                             style: TextButton.styleFrom(
@@ -341,7 +378,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
                         const SizedBox(width: 12),
 
-                        // Save to Savings Button
+                        // Save Button
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -354,7 +391,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                             ),
                             onPressed: () => Navigator.pop(context, true),
                             child: Text(
-                              "Yes",
+                              "Save",
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -372,17 +409,14 @@ class _AddIncomePageState extends State<AddIncomePage> {
       },
     ) ?? false;
 
-    // Handle navigation based on user choice
+    // Handle user choice
     if (!mounted) return;
 
-    if (shouldNavigateToSavings) {
-      // Navigate to savings page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SavingsPage()),
-      );
+    if (shouldSave) {
+      // Create a savings goal with the 10% amount
+      await _createAutoSavingsGoal(savingsAmount, incomeCategory);
     } else {
-      // Navigate back to income page
+      // Just navigate back
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const IncomePage()),
@@ -390,6 +424,64 @@ class _AddIncomePageState extends State<AddIncomePage> {
     }
   }
 
+  /// Create an automatic savings goal for 10% of income
+  Future<void> _createAutoSavingsGoal(double savingsAmount, String sourceCategory) async {
+    try {
+      if (_userId == null) return;
+
+      final savingsGoalsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('savingsGoals');
+
+      // Create a new savings goal
+      final goalName = 'Auto-Save from $sourceCategory';
+      
+      await savingsGoalsRef.add({
+        'name': goalName,
+        'category': 'Emergency', // Default category for auto-savings
+        'targetAmount': savingsAmount,
+        'currentAmount': savingsAmount, // Already saved the full 10%
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isAutoSaved': true, // Mark as auto-generated
+      });
+
+      debugPrint('💾 Auto-savings goal created: $goalName - RM${savingsAmount.toStringAsFixed(2)}');
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Saved RM${savingsAmount.toStringAsFixed(2)} to savings!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Navigate back to income page
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const IncomePage()),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error creating auto-savings goal: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving to goals: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show confirmation popup for new income
   /// Date Picker
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -401,7 +493,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF11355F),
+              primary: Color(0xFF3C79C1),
             ),
           ),
           child: child!,
@@ -552,8 +644,8 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF11355F);
-    const Color accentBlue = Color(0xFF2A466F);
+    const Color primaryBlue = Color(0xFF3C79C1);
+    const Color accentBlue = Color.fromARGB(255, 125, 86, 187);
     const Color neonBlue = Color(0xFF58C5FF);
     const Color violet = Color(0xFF7C5CFF);
     const Color coral = Color(0xFFFF7A59);
@@ -565,7 +657,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF3C79C1), Color(0xFF2A466F)],
+              colors: [Color(0xFF3C79C1), Color.fromARGB(255, 125, 86, 187)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -761,9 +853,8 @@ class _AddIncomePageState extends State<AddIncomePage> {
                                       )
                                     : const LinearGradient(
                                         colors: [
-                                          neonBlue,
-                                          violet,
-                                          coral,
+                                          primaryBlue,
+                                          accentBlue,
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -771,7 +862,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (neonBlue).withAlpha((0.40 * 255).round()),
+                                    color: (primaryBlue).withAlpha((0.40 * 255).round()),
                                     blurRadius: 24,
                                     offset: const Offset(0, 12),
                                   ),

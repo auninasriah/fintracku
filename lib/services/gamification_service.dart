@@ -88,7 +88,7 @@ class GamificationService {
     };
   }
 
-  /// ✅ FIXED: Better deduction logic
+  /// ✅ FIXED: Better deduction logic without FieldValue in map
   Future<void> deductPoints({
     required double amount,
     required String reason,
@@ -102,44 +102,51 @@ class GamificationService {
         .collection('gamification')
         .doc('stats');
 
-    final snapshot = await docRef.get();
-    if (!snapshot.exists) {
-      await getOrInitializeUserGamification();
-      return;
+    try {
+      final snapshot = await docRef.get();
+      if (!snapshot.exists) {
+        await getOrInitializeUserGamification();
+        return;
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      double currentPoints = (data['currentMonthPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
+      double totalPoints = (data['totalPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
+
+      debugPrint('🔍 Before deduction: $currentPoints SP');
+
+      // Calculate new points
+      final newCurrentPoints = (currentPoints - amount).clamp(0.0, 1000.0);
+      final newTotalPoints = (totalPoints - amount).clamp(0.0, 1000.0);
+
+      // Only update if points actually changed
+      if (newCurrentPoints == currentPoints) {
+        debugPrint('⚠️ Points already at target level: $currentPoints SP');
+        return;
+      }
+
+      debugPrint('💳 Deducting $amount SP: $currentPoints -> $newCurrentPoints SP');
+
+      // ✅ Build deduction record WITHOUT FieldValue (will add timestamp in update)
+      final deduction = {
+        'amount': amount,
+        'reason': reason,
+        'pointsAfter': newCurrentPoints,
+        'timestamp': Timestamp.now(),  // ✅ Use Timestamp.now() instead of FieldValue
+      };
+
+      // Update Firestore
+      await docRef.update({
+        'currentMonthPoints': newCurrentPoints,
+        'totalPoints': newTotalPoints,
+        'pointDeductions': FieldValue.arrayUnion([deduction]),
+      });
+      
+      debugPrint('✅ Deduction saved: New balance = $newCurrentPoints SP');
+    } catch (e) {
+      debugPrint('❌ Error deducting points: $e');
+      rethrow;
     }
-
-    final data = snapshot.data() as Map<String, dynamic>;
-    double currentPoints = (data['currentMonthPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
-    double totalPoints = (data['totalPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
-
-    debugPrint('🔍 Before deduction: $currentPoints SP');
-
-    // Calculate new points
-    final newCurrentPoints = (currentPoints - amount).clamp(0.0, 1000.0);
-    final newTotalPoints = (totalPoints - amount).clamp(0.0, 1000.0);
-
-    // Only update if points actually changed
-    if (newCurrentPoints == currentPoints) {
-      debugPrint('⚠️ Points already at target level: $currentPoints SP');
-      return;
-    }
-
-    debugPrint('💳 Deducting $amount SP: $currentPoints -> $newCurrentPoints SP');
-
-    final deduction = {
-      'date': FieldValue.serverTimestamp(),
-      'amount': amount,
-      'reason': reason,
-      'pointsAfter': newCurrentPoints,
-    };
-
-    await docRef.update({
-      'currentMonthPoints': newCurrentPoints,
-      'totalPoints': newTotalPoints,
-      'pointDeductions': FieldValue.arrayUnion([deduction]),
-    });
-    
-    debugPrint('✅ Deduction saved: New balance = $newCurrentPoints SP');
   }
 
   Future<List<Map<String, dynamic>>> getDeductionHistory() async {
@@ -177,7 +184,9 @@ class GamificationService {
             return initialPoints.toDouble();
           }
           final data = snapshot.data() as Map<String, dynamic>;
-          return (data['currentMonthPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
+          final points = (data['currentMonthPoints'] as num?)?.toDouble() ?? initialPoints.toDouble();
+          debugPrint('🎮 GamificationService Stream: currentMonthPoints = $points SP');
+          return points;
         });
   }
 
@@ -239,11 +248,11 @@ Future<void> addPoints({
     final newCurrentPoints = currentPoints + amount;
     final newTotalPoints = totalPoints + amount;
 
-    // Log the addition
+    // Log the addition (✅ Use Timestamp.now() instead of FieldValue.serverTimestamp())
     pointAdditions.add({
       'amount': amount,
       'reason': reason,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp': Timestamp.now(),  // ✅ Fixed: Use Timestamp.now() in maps
     });
 
     transaction.update(gamificationRef, {

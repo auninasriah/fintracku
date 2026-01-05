@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/gamification_service.dart';
 
-const _primary = Color.fromARGB(255, 105, 158, 218); 
-const _accent = Color(0xFF234A78);
+const _primary = Color(0xFF3C79C1); // Vibrant Light Blue
+const _accent = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
 
 class AddExpensePage extends StatefulWidget {
   final String? existingId;
@@ -378,18 +378,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
   Widget _buildGradientButton({required String text, required VoidCallback onPressed}) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(18.0),
+        gradient: const LinearGradient(
           colors: [_primary, _accent],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 3),
+            color: _primary.withAlpha((0.40 * 255).round()),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -397,7 +396,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(18.0),
           child: Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -412,6 +411,139 @@ class _AddExpensePageState extends State<AddExpensePage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Custom Input Field Widget (matching add_income_page style)
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    String? Function(String?)? validator,
+    TextInputType inputType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2D3748),
+              fontSize: 14,
+            ),
+          ),
+        ),
+        TextFormField(
+          controller: controller,
+          validator: validator,
+          keyboardType: inputType,
+          style: const TextStyle(
+            color: Color(0xFF1A202C),
+            fontWeight: FontWeight.w600,
+          ),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: const Color(0xFF58C5FF), size: 20),
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w400,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF7FAFC),
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFF58C5FF),
+                width: 2.0,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF6B6B),
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Date Picker Widget (matching add_income_page style)
+  Widget _buildDatePicker() {
+    final displayDate = _selectedDate == DateTime.now()
+        ? "Select Date"
+        : DateFormat('dd MMMM yyyy').format(_selectedDate);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            "Date",
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2D3748),
+              fontSize: 14,
+            ),
+          ),
+        ),
+        GestureDetector(
+          onTap: _pickDate,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today,
+                  color: Color(0xFF58C5FF),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayDate,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -453,150 +585,223 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _accent,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF3C79C1), Color(0xFF2A466F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFD),
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_primary, _accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(''),
-          centerTitle: false, 
         ),
-        body: Column(
+        title: Text(
+          widget.existingId != null ? "Edit Expense ✏️" : "New Expense 💸",
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+        toolbarHeight: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, top: 0, bottom: 20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      // ✅ FIXED: Changed from withOpacity(0.2) to withValues(alpha: 0.2)
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.money_off, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    widget.existingId != null ? 'Edit Expense' : 'Record New Expense',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 60),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_primary, _accent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha((0.15 * 255).round()),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(25),
-                    topRight: Radius.circular(25),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -30,
+                    top: -40,
+                    child: Container(
+                      height: 140,
+                      width: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withAlpha((0.08 * 255).round()),
+                      ),
+                    ),
                   ),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text('Category', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: DropdownButtonFormField<String>(
-                            value: _category,
-                            decoration: const InputDecoration(
-                              contentPadding: EdgeInsets.zero,
-                              border: InputBorder.none,
-                              hintText: 'e.g. Food & Drink, Transport',
-                              hintStyle: TextStyle(color: Colors.grey),
-                            ),
-                            items: _categories
-                                .map((cat) => DropdownMenuItem(
-                                      value: cat,
-                                      child: Text(cat),
-                                    ))
-                                .toList(),
-                            onChanged: (val) => setState(() {
-                              _category = val!;
-                            }),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text('Amount (RM)', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        const SizedBox(height: 4),
-                        _buildTextField(
-                          controller: _amountController,
-                          hintText: '0.00',
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          prefixIcon: const Icon(Icons.money),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return 'Enter amount';
-                            if (double.tryParse(value) == null) return 'Enter valid number';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Text('Date', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: _pickDate,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8.0),
-                              border: Border.all(color: Colors.transparent),
+                              color: Colors.white.withAlpha((0.95 * 255).round()),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: Row(
+                            child: const Icon(
+                              Icons.money_off_rounded,
+                              color: _primary,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.calendar_today, color: Colors.grey),
-                                const SizedBox(width: 10),
                                 Text(
-                                  DateFormat('dd MMMM yyyy').format(_selectedDate),
-                                  style: const TextStyle(fontSize: 16),
+                                  widget.existingId != null ? "Update your record" : "Track your spending",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  widget.existingId != null
+                                      ? "Fine-tune the details"
+                                      : "Every expense counts!",
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha((0.82 * 255).round()),
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Form
+            Transform.translate(
+              offset: const Offset(0, -30),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha((0.08 * 255).round()),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Category Field
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 8),
+                              child: Text(
+                                "Category",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2D3748),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF7FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: DropdownButtonFormField<String>(
+                                value: _category,
+                                decoration: const InputDecoration(
+                                  contentPadding: EdgeInsets.zero,
+                                  border: InputBorder.none,
+                                ),
+                                items: _categories
+                                    .map((cat) => DropdownMenuItem(
+                                          value: cat,
+                                          child: Text(cat),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) => setState(() {
+                                  _category = val!;
+                                }),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text('Note (optional)', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        const SizedBox(height: 4),
-                        _buildTextField(
+                        const SizedBox(height: 18),
+                        _buildInputField(
+                          controller: _amountController,
+                          label: "Amount (RM)",
+                          hint: "0.00",
+                          icon: Icons.attach_money,
+                          inputType: TextInputType.number,
+                          validator: (v) {
+                            if (v!.isEmpty) return "Enter amount";
+                            if (double.tryParse(v) == null) {
+                              return "Invalid number format";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        _buildDatePicker(),
+                        const SizedBox(height: 18),
+                        _buildInputField(
                           controller: _noteController,
-                          hintText: 'Short description of expense source...',
-                          keyboardType: TextInputType.text,
+                          label: "Note (optional)",
+                          hint: "Add a brief note",
+                          icon: Icons.edit_note,
                         ),
                         const SizedBox(height: 32),
                         _buildGradientButton(
                           text: widget.existingId != null ? 'UPDATE EXPENSE' : 'SAVE EXPENSE',
                           onPressed: _saveExpense,
                         ),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),

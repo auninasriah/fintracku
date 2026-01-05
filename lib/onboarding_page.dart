@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // <- ditambah
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'login_page.dart';
 
@@ -11,6 +11,9 @@ import 'login_page.dart';
 import 'onboarding_screens/on_page_intro.dart';
 import 'onboarding_screens/on_page_income_goal.dart';
 import 'onboarding_screens/on_page_settings.dart';
+
+const Color brandStart = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color brandEnd = Color.fromARGB(255, 126, 91, 182); // Vibrant Purple
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -71,7 +74,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         // optional: show error but still continue to home
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Gagal simpan data onboarding: $e")),
+            SnackBar(content: Text("Failed to save data: $e")),
           );
         }
       }
@@ -89,82 +92,127 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
+  void _goToPage(int page) {
+    _controller.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: PageView(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [brandStart, brandEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              /// Page Content
+              Expanded(
+                child: PageView(
+                  controller: _controller,
+                  onPageChanged: (index) {
+                    setState(() => _page = index);
+                  },
+                  children: [
+                    OnPageIntro(
+                      onSkip: _page == 0
+                          ? () => _goToPage(2)
+                          : null,
+                    ),
+                    OnPageIncomeGoal(
+                      incomeController: _incomeCtrl,
+                      currentGoal: _goal,
+                      onGoalSelected: (g) => setState(() => _goal = g),
+                    ),
+                    OnPageSettings(
+                      notifications: _notifications,
+                      theme: _theme,
+                      onToggleNotifications: (b) =>
+                          setState(() => _notifications = b),
+                      onThemeChange: (t) => setState(() => _theme = t),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              /// Smooth Page Indicator
+              SmoothPageIndicator(
                 controller: _controller,
-                onPageChanged: (index) {
-                  setState(() => _page = index);
-                },
-                children: [
-                  const OnPageIntro(),
-                  OnPageIncomeGoal(
-                    incomeController: _incomeCtrl,
-                    currentGoal: _goal,
-                    onGoalSelected: (g) => setState(() => _goal = g),
-                  ),
-                  OnPageSettings(
-                    notifications: _notifications,
-                    theme: _theme,
-                    onToggleNotifications: (b) =>
-                        setState(() => _notifications = b),
-                    onThemeChange: (t) => setState(() => _theme = t),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SmoothPageIndicator(
-              controller: _controller,
-              count: 3,
-              effect: const WormEffect(
-                dotHeight: 10,
-                dotWidth: 10,
-                spacing: 14,
-                activeDotColor: Colors.blueAccent,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52),
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                onPressed: () {
-                  if (_page == 2) {
-                    _finishOnboarding();
-                  } else {
-                    _controller.nextPage(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
-                child: Text(
-                  _page == 2 ? "Start" : "Next",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                count: 3,
+                effect: const WormEffect(
+                  dotHeight: 8,
+                  dotWidth: 8,
+                  spacing: 12,
+                  activeDotColor: brandStart,
+                  dotColor: Color(0xFFE0E0E0),
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 24),
+
+              /// Navigation Buttons - Only show on last page
+              if (_page == 2)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _finishOnboarding,
+                          borderRadius: BorderRadius.circular(14),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: ShaderMask(
+                              shaderCallback: (Rect bounds) {
+                                return const LinearGradient(
+                                  colors: [brandStart, brandEnd],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ).createShader(bounds);
+                              },
+                              child: Text(
+                                "Get Started",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

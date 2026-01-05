@@ -5,6 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 
+// --- COLOR DEFINITIONS (Vibrant Blue & Purple Theme) ---
+const Color cardGradientStart = Color(0xFF3C79C1); // Vibrant Light Blue
+const Color cardGradientEnd = Color.fromARGB(255, 125, 86, 187); // Vibrant Purple
+
 /// ProfileSetupPage
 /// Allows users to select and save a profile picture from their device gallery
 /// The selected image is saved locally and the path is stored in SharedPreferences
@@ -37,7 +41,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       debugPrint('Error picking image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error picking image from gallery')),
+          SnackBar(content: Text('Error picking image from gallery', style: GoogleFonts.inter())),
         );
       }
     }
@@ -60,7 +64,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       debugPrint('Error taking photo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error taking photo')),
+          SnackBar(content: Text('Error taking photo', style: GoogleFonts.inter())),
         );
       }
     }
@@ -70,7 +74,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Future<void> _saveProfileImage() async {
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an image first')),
+        SnackBar(content: Text('Please select an image first', style: GoogleFonts.inter())),
       );
       return;
     }
@@ -97,9 +101,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         setState(() => _isSaving = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile picture saved successfully!'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('Profile picture saved successfully!', style: GoogleFonts.inter()),
+            duration: const Duration(seconds: 2),
           ),
         );
 
@@ -115,7 +119,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving image: $e')),
+          SnackBar(content: Text('Error saving image: $e', style: GoogleFonts.inter())),
         );
       }
     }
@@ -125,11 +129,20 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cardGradientStart, cardGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text('Profile Picture Setup', style: GoogleFonts.inter(
           fontWeight: FontWeight.w600,
           color: Colors.white,
         )),
-        backgroundColor: const Color(0xFF3C79C1),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -208,9 +221,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ElevatedButton.icon(
                 onPressed: _pickImageFromGallery,
                 icon: const Icon(Icons.photo_library),
-                label: const Text('Choose from Gallery'),
+                label: Text('Choose from Gallery', style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                )),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3C79C1),
+                  backgroundColor: cardGradientStart,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
@@ -228,9 +243,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ElevatedButton.icon(
                 onPressed: _pickImageFromCamera,
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Take a Photo'),
+                label: Text('Take a Photo', style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                )),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade600,
+                  backgroundColor: cardGradientEnd,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
@@ -253,7 +270,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isSaving
                         ? Colors.grey.shade400
-                        : const Color(0xFF11355F),
+                        : cardGradientStart,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),

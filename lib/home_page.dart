@@ -17,7 +17,9 @@ import 'finance_page.dart';
 import 'settings_page.dart';
 import 'profile_avatar.dart';
 import 'profile_setup_page.dart';
-import 'ai_finance_assistant_page.dart'; 
+import 'ai_finance_assistant_page.dart';
+import 'services/insight_service.dart';
+import 'widgets/insight_card.dart'; 
 
 // --- COLOR DEFINITIONS (Vibrant Blue & Purple Theme) ---
 const Color primaryBlue = Color(0xFF3C79C1); // Vibrant Light Blue
@@ -32,221 +34,6 @@ const Color cardShadowColor = Color(0x333C79C1); // Shadow with vibrant blue ton
 const Color spendingRed = Color(0xFFC62828);
 const Color spendingGreen = Color(0xFF4CAF50);
 
-
-// ================= CHAT ASSISTANT WIDGET =================
-
-/// Represents a single message in the chat.
-// class ChatMessage {
-//   final String text;
-//   final String sender; // 'user' or 'assistant'
-//   final DateTime timestamp;
-
-//   ChatMessage({
-//     required this.text,
-//     required this.sender,
-//     required this.timestamp,
-//   });
-// }
-
-// class ChatScreen extends StatefulWidget {
-//   const ChatScreen({super.key});
-
-//   @override
-//   State<ChatScreen> createState() => _ChatScreenState();
-// }
-
-// class _ChatScreenState extends State<ChatScreen> {
-//   final TextEditingController _controller = TextEditingController();
-//   final ScrollController _scrollController = ScrollController();
-//   final List<ChatMessage> _messages = [
-//     ChatMessage(
-//       text:
-//           "Hello! I'm your Student Finance Assistant. I can help answer quick questions about budgeting and money management.",
-//       sender: 'assistant',
-//       timestamp: DateTime.now(),
-//     ),
-//   ];
-//   bool _isSending = false;
-
-//   void _sendMessage() async {
-//     final text = _controller.text.trim();
-//     if (text.isEmpty) return;
-
-//     setState(() {
-//       _messages.add(ChatMessage(text: text, sender: 'user', timestamp: DateTime.now()));
-//       _controller.clear();
-//       _isSending = true;
-//     });
-
-//     _scrollToBottom();
-
-//     final assistantResponse = await _getAssistantResponse(text);
-
-//     if (!mounted) return; // ✅ FIXED: Guard with mounted check
-
-//     setState(() {
-//       _messages.add(ChatMessage(
-//         text: assistantResponse,
-//         sender: 'assistant',
-//         timestamp: DateTime.now().add(const Duration(seconds: 1)),
-//       ));
-//       _isSending = false;
-//     });
-
-//     _scrollToBottom();
-//   }
-
-//   Future<String> _getAssistantResponse(String prompt) async {
-//     await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
-
-//     final p = prompt.toLowerCase();
-//     if (p.contains('budget') || p.contains('spending')) {
-//       return "Budgeting tip: Try the '50/30/20 Rule'—50% needs, 30% wants, 20% savings. Our Budget tab can help you track this!";
-//     } else if (p.contains('expense')) {
-//       return "To track a new expense, simply tap the 'Expenses' button in the Quick Actions section on the Home Page.";
-//     } else if (p.contains('hello') || p.contains('hi')) {
-//       return "Hi there! How can I assist you with your finances today? Try asking for a budgeting tip!";
-//     } else {
-//       return "I'm focusing on student finance advice. Can you ask me about budgeting, saving, or tracking expenses?";
-//     }
-//   }
-
-//   void _scrollToBottom() {
-//     WidgetsBinding.instance.addPostFrameCallback((_) {
-//       if (_scrollController.hasClients) {
-//         _scrollController.animateTo(
-//           _scrollController.position.maxScrollExtent,
-//           duration: const Duration(milliseconds: 300),
-//           curve: Curves.easeOut,
-//         );
-//       }
-//     });
-//   }
-
-//   @override
-//   void dispose() {
-//     _controller.dispose();
-//     _scrollController.dispose();
-//     super.dispose();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         flexibleSpace: Container(
-//           decoration: const BoxDecoration(
-//             gradient: LinearGradient(
-//               colors: [cardGradientStart, cardGradientEnd],
-//               begin: Alignment.topLeft,
-//               end: Alignment.bottomRight,
-//             ),
-//           ),
-//         ),
-//         title: Text('AI Finance Assistant', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
-//         backgroundColor: Colors.transparent,
-//         foregroundColor: Colors.white,
-//         elevation: 0,
-//       ),
-//       body: Column(
-//         children: [
-//           // Message List
-//           Expanded(
-//             child: ListView.builder(
-//               controller: _scrollController,
-//               padding: const EdgeInsets.all(16.0),
-//               itemCount: _messages.length,
-//               itemBuilder: (context, index) {
-//                 final message = _messages[index];
-//                 final isUser = message.sender == 'user';
-//                 return Align(
-//                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-//                   child: Container(
-//                     margin: const EdgeInsets.only(bottom: 8.0),
-//                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-//                     constraints: BoxConstraints(
-//                       maxWidth: MediaQuery.of(context).size.width * 0.75,
-//                     ),
-//                     decoration: BoxDecoration(
-//                       color: isUser ? primaryBlue : Colors.grey.shade200,
-//                       borderRadius: BorderRadius.circular(16).copyWith(
-//                         bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(16),
-//                         bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(2),
-//                       ),
-//                     ),
-//                     child: Text(
-//                       message.text,
-//                       style: GoogleFonts.inter(
-//                         color: isUser ? Colors.white : Colors.black87,
-//                         fontSize: 13.5,
-//                         fontWeight: FontWeight.w400,
-//                       ),
-//                     ),
-//                   ),
-//                 );
-//               },
-//             ),
-//           ),
-
-//           // Input Field
-//           Container(
-//             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-//             decoration: BoxDecoration(
-//               color: Colors.white,
-//               boxShadow: [
-//                 BoxShadow(color: Colors.grey.shade300, blurRadius: 4, offset: const Offset(0, -2))
-//               ],
-//             ),
-//             child: Row(
-//               children: [
-//                 Expanded(
-//                   child: TextField(
-//                     controller: _controller,
-//                     enabled: !_isSending,
-//                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
-//                     decoration: InputDecoration(
-//                       hintText: _isSending ? 'Assistant is typing...' : 'Ask a finance question...',
-//                       hintStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
-//                       border: OutlineInputBorder(
-//                         borderRadius: BorderRadius.circular(25.0),
-//                         borderSide: BorderSide.none,
-//                       ),
-//                       filled: true,
-//                       fillColor: Colors.grey.shade100,
-//                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-//                     ),
-//                     onSubmitted: _isSending ? null : (_) => _sendMessage(),
-//                   ),
-//                 ),
-//                 const SizedBox(width: 8.0),
-//                 GestureDetector(
-//                   onTap: _isSending ? null : _sendMessage,
-//                   child: Container(
-//                     padding: const EdgeInsets.all(12),
-//                     decoration: BoxDecoration(
-//                       shape: BoxShape.circle,
-//                       color: _isSending ? Colors.grey : primaryBlue,
-//                     ),
-//                     child: _isSending
-//                         ? const SizedBox(
-//                             width: 24,
-//                             height: 24,
-//                             child: CircularProgressIndicator(
-//                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-//                               strokeWidth: 3,
-//                             ),
-//                           )
-//                         : const Icon(LucideIcons.send, color: Colors.white, size: 24),
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 // ================= ANIMATED PATTERN BACKGROUND =================
 class AnimatedPatternBackground extends StatefulWidget {
@@ -620,9 +407,28 @@ class _HomePageState extends State<HomePage> {
   bool _isBalanceVisible = true;
   // Placeholder budget for the spending card logic
   final double _monthlyBudgetGoal = 1200.00;
+  // Insight service instance
+  final InsightService _insightService = InsightService();
+  // Track dismissed insights
+  bool _insightDismissed = false;
 
   // Get current user once
   User? get _user => FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset dismissed flag when page initializes
+    _insightDismissed = false;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Reset insight when returning to this page
+    if (state == AppLifecycleState.resumed) {
+      setState(() => _insightDismissed = false);
+    }
+  }
 
   // --- Firestore Stream for User Name ---
   Stream<String> _getUserNameStream() {
@@ -1122,24 +928,46 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: actionIconBackground,
-              borderRadius: BorderRadius.circular(15),
+              gradient: const LinearGradient(
+                colors: [cardGradientStart, cardGradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 4)) // ✅ FIXED
+                // Glow effect - multiple layered shadows
+                BoxShadow(
+                  color: primaryBlue.withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 0),
+                ),
+                BoxShadow(
+                  color: cardGradientEnd.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
+                // Subtle drop shadow
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Icon(icon, size: 26, color: iconColor),
+            child: Icon(icon, size: 26, color: Colors.white),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: primaryBlue,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
+              color: Colors.black87,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -1198,12 +1026,15 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Progress Bar
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                  minHeight: 10,
+                // Progress Bar with Curved Sides
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                    minHeight: 10,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
@@ -1255,6 +1086,43 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // --- WIDGET 4: Personalized Expense Insight Card ---
+  Widget _personalizedInsightWidget() {
+    return FutureBuilder<ExpenseInsight>(
+      future: _insightService.detectRepeatedSpending(),
+      builder: (context, snapshot) {
+        // Debug logs
+        debugPrint('🔍 Insight Widget State:');
+        debugPrint('   - Loading: ${snapshot.connectionState == ConnectionState.waiting}');
+        debugPrint('   - Has Data: ${snapshot.hasData}');
+        debugPrint('   - Dismissed: $_insightDismissed');
+        if (snapshot.hasData) {
+          debugPrint('   - Message: ${snapshot.data!.message}');
+          debugPrint('   - Has Repeated: ${snapshot.data!.hasRepeatedSpending}');
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+
+        if (!snapshot.hasData || _insightDismissed) {
+          return const SizedBox.shrink();
+        }
+
+        final insight = snapshot.data!;
+
+        return AnimatedInsightCard(
+          message: insight.message,
+          suggestion: insight.suggestion,
+          isRepeatedSpending: insight.hasRepeatedSpending,
+          onDismiss: () {
+            setState(() => _insightDismissed = true);
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // If the user isn't logged in, show a simple placeholder and allow navigation to login.
@@ -1280,6 +1148,8 @@ class _HomePageState extends State<HomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _quickActions(context),
+                    const SizedBox(height: 18),
+                    _personalizedInsightWidget(),
                     const SizedBox(height: 18),
                     _currentSpendingCard(context),
                     const SizedBox(height: 24),
@@ -1347,15 +1217,15 @@ class CustomBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         color: const Color(0xEBFFFFFF),
         borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: const Color(0x14000000),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+            blurRadius: 15,
+            offset: const Offset(0, -3),
           )
         ],
       ),
@@ -1377,18 +1247,25 @@ class CustomBottomNav extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          gradient: active
+              ? const LinearGradient(
+                  colors: [cardGradientStart, cardGradientEnd],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: active ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: const Color(0x5911355F),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                    color: cardGradientStart.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   )
                 ]
               : null,
@@ -1396,19 +1273,23 @@ class CustomBottomNav extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: active ? 24 : 22,
-              color: active ? Colors.white : primaryBlue,
-            ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
+            AnimatedScale(
+              scale: active ? 1.1 : 1.0,
               duration: const Duration(milliseconds: 200),
+              child: Icon(
+                icon,
+                size: active ? 22 : 20,
+                color: active ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 250),
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 color: active ? Colors.white : Colors.black54,
-                letterSpacing: 0.2,
+                letterSpacing: 0.3,
               ),
               child: Text(label),
             )
